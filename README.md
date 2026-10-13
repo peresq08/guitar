@@ -7,10 +7,10 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | Sección | Para qué sirve |
 |---|---|
 | **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel y el tiempo que tengas. |
-| **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, metrónomo progresivo y Jam con batería y bajo. |
+| **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
-| **Acordes** | 35 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de canciones, récords y respaldo de datos. |
+| **Acordes** | 41 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
+| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 27 canciones (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 
@@ -47,6 +47,15 @@ En **Practicar → Secuencias** armas la progresión de una canción (por ejempl
 - Puedes ligarla a una canción del repertorio; aparece un botón para practicarla desde Progreso y desde la canción del día.
 - El tempo sube o baja solo con las mismas reglas del entrenador de cambios.
 - Con la calificación por micrófono, la app revisa que cada acorde suene a tiempo y te muestra qué cambio de la secuencia te cuesta más, con un atajo para practicar ese par.
+
+## Entrenador de rasgueo
+
+En **Practicar → Rasgueo** hay 11 patrones, de negras y pop básico a galope, shuffle y tres niveles de funk en semicorcheas. Cada casilla muestra ↓ abajo, ↑ arriba, ✕ golpe apagado o · la mano pasa sin tocar. Las flechas grandes son acentos.
+
+- **Sonido guía:** escucha el patrón tocado con el acorde o la secuencia que elijas.
+- **Rondas de 8 o 16 compases**, o **sin fin** con subida de 2 BPM cada 4 compases.
+- **Con el micrófono**, la app detecta cada golpe y te dice cuántos cayeron a tiempo, qué tan parejo vas (en milisegundos) y qué parte del patrón se adelanta o se atrasa (por ejemplo: "las 'a' llegan 27 ms tarde"). Solo sube el tempo cuando el ritmo es sólido.
+- **Crea tus propios patrones** tocando las casillas.
 
 ## Consejos para el micrófono
 

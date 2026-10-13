@@ -253,3 +253,34 @@ kbd{font-family:var(--mono);font-size:.75rem;padding:1px 6px;border:1px solid va
 .stage .beats i{background:currentColor;opacity:.22}
 .stage .beats i.on{background:currentColor;opacity:1;transform:scale(1.15)}
 .stage .beats i.acc:not(.on){opacity:.4}
+
+/* Rasgueo */
+.sgrid{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:3px}
+.scell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);min-width:0;font:inherit;color:inherit}
+.scell.beat{border-left:2px solid var(--muted)}
+.scell .sym{font-size:1.5rem;line-height:1;font-weight:700}
+.scell.acc .sym{color:var(--accent);font-size:1.75rem}
+.scell.mute .sym{color:var(--warn);font-size:1.1rem;line-height:1.35}
+.scell.rest .sym{color:var(--muted);opacity:.6}
+.scell .cnt{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.scell.on{background:var(--accent);border-color:var(--accent)}
+.scell.on .sym,.scell.on .cnt{color:var(--accent-ink)}
+.scell .dev{font-family:var(--mono);font-size:.6rem;font-weight:700;padding:1px 2px;border-radius:4px;white-space:nowrap}
+.scell .dev.good{color:var(--good)} .scell .dev.warn{color:var(--warn)} .scell .dev.bad{color:var(--led)}
+.sgrid.edit .scell{cursor:pointer}
+.pcard{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer;font:inherit;color:inherit}
+.pcard.on{border-color:var(--accent);background:var(--soft)}
+.pcard b{font-family:var(--display);font-size:1.05rem}
+.pmini{font-size:.95rem;letter-spacing:.06em;white-space:pre;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+@media (max-width:640px){
+  .sgrid{grid-template-columns:repeat(var(--half),minmax(0,1fr))}
+  .scell .sym{font-size:1.3rem}
+}
+.subtabs{overflow-x:auto;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs button{flex:1 0 auto}
+@media (min-width:1000px){ .subtabs{max-width:680px} }
+@media (max-width:640px){
+  .subtabs{flex-wrap:wrap;overflow:visible}
+  .subtabs button{flex:1 0 30%}
+}

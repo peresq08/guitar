@@ -3,6 +3,7 @@ import { CHORDS, diagram, fretboard, NOTES } from "../chords.js";
 import * as A from "../audio.js";
 import { chordTemplate, LAB_MIN, LAB_DIFF } from "../detect.js";
 import { mountSecuencias, showSecuencia } from "./secuencias.js";
+import { mountRasgueo, showRasgueo } from "./rasgueo.js";
 
 let root, tab = "cambios";
 const sub = {};
@@ -13,27 +14,30 @@ export function mount(el) {
   <div class="seg subtabs" role="tablist" aria-label="Herramientas">
     <button role="tab" data-sub="cambios">Cambios</button>
     <button role="tab" data-sub="secuencia">Secuencias</button>
+    <button role="tab" data-sub="rasgueo">Rasgueo</button>
     <button role="tab" data-sub="metro">Metrónomo</button>
     <button role="tab" data-sub="jam">Jam</button>
   </div>
   <div id="p-cambios" class="stack" style="gap:16px"></div>
   <div id="p-secuencia" class="stack" style="gap:16px" hidden></div>
+  <div id="p-rasgueo" class="stack" style="gap:16px" hidden></div>
   <div id="p-metro" class="stack" style="gap:16px" hidden></div>
   <div id="p-jam" class="stack" style="gap:16px" hidden></div>`;
   el.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => setSub(b.dataset.sub));
-  mountCambios($("#p-cambios", el)); mountSecuencias($("#p-secuencia", el)); mountMetro($("#p-metro", el)); mountJam($("#p-jam", el));
+  mountCambios($("#p-cambios", el)); mountSecuencias($("#p-secuencia", el)); mountRasgueo($("#p-rasgueo", el)); mountMetro($("#p-metro", el)); mountJam($("#p-jam", el));
   setSub("cambios");
 }
 function setSub(t) {
   tab = t;
   root.querySelectorAll("[data-sub]").forEach(b => b.setAttribute("aria-selected", b.dataset.sub === t));
-  ["cambios", "secuencia", "metro", "jam"].forEach(k => $("#p-" + k, root).hidden = k !== t);
+  ["cambios", "secuencia", "rasgueo", "metro", "jam"].forEach(k => $("#p-" + k, root).hidden = k !== t);
 }
 export function onShow(opts = {}) {
   if (opts.tab) setSub(opts.tab);
   if (opts.pair && CHORDS[opts.pair[0]] && CHORDS[opts.pair[1]]) setPair(opts.pair[0], opts.pair[1]);
   if (opts.mode && !C.run) setMode(opts.mode);
   if (opts.seq) showSecuencia(opts.seq);
+  if (opts.pattern) showRasgueo(opts.pattern);
 }
 export function refresh() { renderCambiosStats(); }
 export const stopOthers = () => { stopMetro(); stopJam(); };
@@ -438,7 +442,7 @@ function toggleMetro() {
   const a = A.ctx(); if (!a) return;
   if (M.run) { M.run = false; clearInterval(M.timer); A.keepAwake(false); $("#mStart", mel).textContent = "Iniciar"; mel.querySelectorAll("#mBeats i").forEach(e => e.classList.remove("on")); progInfo(); return; }
   if ($("#mProg", mel).checked) setBpm(pcfg().ini);
-  stopJam(); window.dispatchEvent(new Event("riff:stop-seq"));
+  stopJam(); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo"));
   Object.assign(M, { run: true, beat: 0, sub: 0, bars: 0, next: a.currentTime + .06 });
   M.timer = setInterval(schedule, 25); A.keepAwake(true); $("#mStart", mel).textContent = "Detener"; progInfo();
 }
@@ -540,7 +544,7 @@ function jamSchedule() {
 function toggleJam() {
   const a = A.ctx(); if (!a) return;
   if (J.run) { stopJam(); return; }
-  stopMetro(); window.dispatchEvent(new Event("riff:stop-seq"));
+  stopMetro(); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo"));
   Object.assign(J, { run: true, step: 0, bar: 0, next: a.currentTime + .1, startedAt: performance.now() });
   J.timer = setInterval(jamSchedule, 25); A.keepAwake(true); $("#jStart", jel).textContent = "Detener";
 }

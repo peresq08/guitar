@@ -9,7 +9,7 @@ export const LEVELS = [
     goals: [
       { id: "l1-acordes", t: "Tocar G, C, D y Em con todas las cuerdas limpias" },
       { id: "l1-cambio", t: "30 cambios G ↔ C en un minuto", auto: () => bestFor("G ↔ C") >= 30, prog: () => [bestFor("G ↔ C"), 30] },
-      { id: "l1-rasgueo", t: "Rasgueo abajo-abajo-arriba-arriba-abajo-arriba a 70 BPM sin perder el tiempo" },
+      { id: "l1-rasgueo", t: "Rasgueo Pop básico limpio a 70 BPM", auto: () => rasgueoBest("pop") >= 70, prog: () => [rasgueoBest("pop"), 70] },
       { id: "l1-cancion", t: "Tocar una canción completa de principio a fin" },
     ],
   },
@@ -30,7 +30,7 @@ export const LEVELS = [
     goals: [
       { id: "l3-power", t: "Power chords E5, A5, G5 y D5 sin que suenen cuerdas de más" },
       { id: "l3-cambio", t: "50 cambios E5 ↔ A5 en un minuto", auto: () => bestFor("E5 ↔ A5") >= 50, prog: () => [bestFor("E5 ↔ A5"), 50] },
-      { id: "l3-palm", t: "Corcheas con palm mute a 100 BPM durante un minuto" },
+      { id: "l3-palm", t: "Corcheas abajo con palm mute limpias a 100 BPM", auto: () => rasgueoBest("rapido") >= 100, prog: () => [rasgueoBest("rapido"), 100] },
       { id: "l3-riff", t: "Riff de Breaking the Law a velocidad original" },
       { id: "l3-bib", t: "Riff de Back in Black con sus silencios" },
     ],
@@ -57,6 +57,7 @@ export const LEVELS = [
   },
 ];
 
+const rasgueoBest = id => ((data.rasgueos || {}).prog || {})[id]?.best || 0;
 export const goalDone = g => !!data.metas[g.id] || (g.auto ? g.auto() : false);
 export function toggleGoal(id) { if (data.metas[id]) delete data.metas[id]; else data.metas[id] = new Date().toISOString(); save(); }
 export function currentLevel() { return LEVELS.find(l => !l.goals.every(goalDone)) || LEVELS[LEVELS.length - 1]; }
@@ -76,11 +77,58 @@ export const SEED_SONGS = [
   { titulo: "Every Breath You Take", artista: "The Police", nivel: 4, bpm: 117, tip: "Arpegios con estiramientos de dedos." },
   { titulo: "Sweet Child O' Mine", artista: "Guns N' Roses", nivel: 4, bpm: 125, tip: "Intro de arpegios cruzando cuerdas; meta de largo plazo." },
 ];
+// Biblioteca de canciones: progresiones conocidas, marcadas como simplificadas o aproximadas cuando lo son.
+// El tempo es el aproximado de la grabación original. "rasgueo" apunta a un patrón del entrenador de rasgueo.
+export const LIBRARY = [
+  { titulo: "Every Rose Has Its Thorn", artista: "Poison", anio: 1988, rasgueo: "balada", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "G Cadd9 G Cadd9 D Cadd9 G G" }] },
+  { titulo: "Here I Go Again", artista: "Whitesnake", anio: 1987, rasgueo: "rock8" },
+  { titulo: "Patience", artista: "Guns N' Roses", anio: 1988, rasgueo: "balada" },
+  { titulo: "Summer of '69", artista: "Bryan Adams", anio: 1984, rasgueo: "rock8", secuencias: [{ nombre: "estrofa", acordes: "D A" }] },
+  { titulo: "Breaking the Law", artista: "Judas Priest", anio: 1980, rasgueo: "rapido" },
+  { titulo: "Back in Black", artista: "AC/DC", anio: 1980 },
+  { titulo: "Livin' on a Prayer", artista: "Bon Jovi", anio: 1986, rasgueo: "rapido" },
+  { titulo: "Seek & Destroy", artista: "Metallica", anio: 1983, rasgueo: "galope" },
+  { titulo: "Every Breath You Take", artista: "The Police", anio: 1983, secuencias: [{ nombre: "estrofa", acordes: "G Em C D" }] },
+  { titulo: "Sweet Child O' Mine", artista: "Guns N' Roses", anio: 1987, secuencias: [{ nombre: "estrofa", acordes: "D C G D" }, { nombre: "coro", acordes: "A C D D" }] },
+  { titulo: "Don't Stop Believin'", artista: "Journey", anio: 1981, nivel: 5, bpm: 119, rasgueo: "pop", tip: "Cuatro acordes con cejilla en B, C#m y G#m. Si cuesta, empieza con el cambio E → B.", secuencias: [{ nombre: "estrofa", acordes: "E B C#m A E B G#m A" }] },
+  { titulo: "With or Without You", artista: "U2", anio: 1987, nivel: 5, bpm: 110, rasgueo: "rock8", tip: "Los mismos cuatro acordes toda la canción: perfecta para afianzar Bm.", secuencias: [{ nombre: "toda la canción", acordes: "D A Bm G" }] },
+  { titulo: "Knockin' on Heaven's Door", artista: "Guns N' Roses", anio: 1991, nivel: 2, bpm: 68, rasgueo: "balada", tip: "Dos frases casi iguales: la primera termina en Am y la segunda en C.", secuencias: [{ nombre: "toda la canción", acordes: "G D Am:8 G D C:8" }] },
+  { titulo: "Zombie", artista: "The Cranberries", anio: 1994, nivel: 1, bpm: 84, rasgueo: "rock8", tip: "Versión simplificada: C en lugar de Cmaj7 y D en lugar de D/F#.", secuencias: [{ nombre: "toda la canción (simplificada)", acordes: "Em C G D" }] },
+  { titulo: "Creep", artista: "Radiohead", anio: 1992, nivel: 5, bpm: 92, rasgueo: "pop", tip: "B y Cm con cejilla. De C a Cm solo cambian dos dedos.", secuencias: [{ nombre: "toda la canción", acordes: "G B C Cm" }] },
+  { titulo: "Hotel California", artista: "Eagles", anio: 1976, nivel: 5, bpm: 74, rasgueo: "pop", tip: "Ocho acordes con varias cejillas; practícala por mitades.", secuencias: [{ nombre: "estrofa", acordes: "Bm F# A E G D Em F#" }] },
+  { titulo: "Stand by Me", artista: "Ben E. King", anio: 1961, nivel: 5, bpm: 118, rasgueo: "pop", tip: "La progresión más clásica: A, F#m, D y E.", secuencias: [{ nombre: "estrofa", acordes: "A:8 F#m:8 D:4 E:4 A:8" }] },
+  { titulo: "Sweet Home Alabama", artista: "Lynyrd Skynyrd", anio: 1974, nivel: 1, bpm: 98, rasgueo: "rock8", tip: "D, C y G toda la canción; en la grabación es un riff con esos acordes.", secuencias: [{ nombre: "toda la canción", acordes: "D:2 C:2 G:4" }] },
+  { titulo: "I Love Rock 'n' Roll", artista: "Joan Jett & the Blackhearts", anio: 1981, nivel: 3, bpm: 94, rasgueo: "negras", tip: "Power chords con golpes firmes en cada tiempo.", secuencias: [{ nombre: "coro (simplificado)", acordes: "E5 A5 B5 B5" }] },
+  { titulo: "Smoke on the Water", artista: "Deep Purple", anio: 1972, nivel: 3, bpm: 112, tip: "El riff más famoso del rock, con power chords en la 4ª y 5ª cuerda.", secuencias: [{ nombre: "riff (aprox.)", acordes: "G5:1 Bb5:1 C5:2 G5:1 Bb5:1 C#5:1 C5:1 G5:1 Bb5:1 C5:2 Bb5:1 G5:3" }] },
+  { titulo: "Iron Man", artista: "Black Sabbath", anio: 1970, nivel: 3, bpm: 76, tip: "Riff lento y pesado con power chords; ideal para practicar cambios por el mástil.", secuencias: [{ nombre: "riff (aprox.)", acordes: "B5:2 D5:2 E5:4 G5:1 F#5:1 G5:1 F#5:1 G5:1 F#5:1 D5:2 E5:4" }] },
+  { titulo: "Should I Stay or Should I Go", artista: "The Clash", anio: 1982, nivel: 1, bpm: 113, rasgueo: "rock8", tip: "D y G con ataque punk.", secuencias: [{ nombre: "riff", acordes: "D:2 G:2 D:4" }] },
+  { titulo: "Wonderful Tonight", artista: "Eric Clapton", anio: 1977, nivel: 1, bpm: 96, rasgueo: "balada", tip: "Balada lenta con G, D y C: buena para un rasgueo suave y parejo.", secuencias: [{ nombre: "estrofa", acordes: "G D C D" }] },
+  { titulo: "Have You Ever Seen the Rain", artista: "Creedence Clearwater Revival", anio: 1970, nivel: 2, bpm: 116, rasgueo: "pop", tip: "El coro es una buena práctica para F (mini).", secuencias: [{ nombre: "coro", acordes: "F (mini) G C Am F (mini) G C:8" }] },
+  { titulo: "Brown Eyed Girl", artista: "Van Morrison", anio: 1967, nivel: 1, bpm: 150, rasgueo: "pop", tip: "G, C y D a buen ritmo.", secuencias: [{ nombre: "estrofa", acordes: "G C G D" }] },
+  { titulo: "Get Lucky", artista: "Daft Punk ft. Pharrell Williams", anio: 2013, nivel: 5, bpm: 116, rasgueo: "funk1", tip: "Guitarra funk en semicorcheas con la mano siempre en movimiento.", secuencias: [{ nombre: "toda la canción", acordes: "Bm D F#m E" }] },
+  { titulo: "Uptown Funk", artista: "Mark Ronson ft. Bruno Mars", anio: 2014, nivel: 2, bpm: 115, rasgueo: "funk2", tip: "Dos acordes con golpes cortos y apagados.", secuencias: [{ nombre: "riff (simplificado)", acordes: "Dm7 G7" }] },
+];
 export function ensureSongs() {
+  let changed = false;
   if (!Array.isArray(data.canciones)) {
     data.canciones = SEED_SONGS.map((s, i) => ({ id: "s" + i, titulo: s.titulo, artista: s.artista, nivel: s.nivel, bpmMeta: s.bpm, tip: s.tip, estado: "pendiente", notas: "" }));
-    save();
+    changed = true;
   }
+  // Registro de lo que ya se agregó, para no duplicar ni volver a agregar lo que hayas borrado
+  if (!data.agregado) { data.agregado = { canciones: SEED_SONGS.map(s => s.titulo), secuencias: [] }; changed = true; }
+  LIBRARY.forEach((L, i) => {
+    let song = data.canciones.find(s => s.titulo === L.titulo);
+    if (!song && !data.agregado.canciones.includes(L.titulo) && L.nivel) {
+      song = { id: "b" + i, titulo: L.titulo, artista: L.artista, nivel: L.nivel, bpmMeta: L.bpm, tip: L.tip, estado: "pendiente", notas: "" };
+      data.canciones.push(song); changed = true;
+    }
+    if (!data.agregado.canciones.includes(L.titulo)) { data.agregado.canciones.push(L.titulo); changed = true; }
+    if (song) {
+      if (L.anio && !song.anio) { song.anio = L.anio; changed = true; }
+      if (L.rasgueo && !song.rasgueo) { song.rasgueo = L.rasgueo; changed = true; }
+    }
+  });
+  if (changed) save();
 }
 export function songOfDay(l = currentLevel()) {
   const songs = data.canciones || [];
@@ -107,8 +155,8 @@ export function buildRoutine(total = data.ajustes.rutinaMin || 30, l = currentLe
     l.scale
       ? { n: "Improvisación", w: 7, tip: "Abre Jam, elige Rock en Mi menor o Blues en La e improvisa con la pentatónica. Busca frases cortas y deja silencios.", tool: "jam" }
       : l.power
-        ? { n: "Power chords y palm mute", w: 7, tip: "Corcheas con palm mute en E5; cambia a G5 y A5. Usa el metrónomo progresivo de 80 a 110 BPM.", chords: ["E5", "G5", "A5"], tool: "metro" }
-        : { n: "Ritmo", w: 7, tip: "Rasgueo abajo-abajo-arriba-arriba-abajo-arriba con los acordes del nivel. Mantén el brazo en movimiento aunque no toques las cuerdas.", tool: "metro" },
+        ? { n: "Power chords y palm mute", w: 7, tip: "Corcheas abajo con palm mute en E5, G5 y A5 en el entrenador de rasgueo. Cuando salga parejo, prueba el galope.", chords: ["E5", "G5", "A5"], tool: "rasgueo", pattern: "rapido" }
+        : { n: "Ritmo", w: 7, tip: l.id === 1 ? "Patrón Pop básico en el entrenador de rasgueo. Mantén el brazo en movimiento aunque no toques las cuerdas." : "Un patrón de rasgueo con los acordes del nivel. Cuando el Pop básico salga limpio, prueba Rock en corcheas o Funk 1.", tool: "rasgueo", pattern: l.id === 1 ? "pop" : "rock8" },
     { n: "Canción del día", w: 10, song },
   ];
   const W = blocks.reduce((a, b) => a + b.w, 0);

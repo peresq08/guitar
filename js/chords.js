@@ -15,6 +15,7 @@ export const CHORDS = {
   "Dm":  { f: "xx0231", d: "---231", g: "Menores" },
   "Em7": { f: "022033", d: "-12-34", g: "Menores" },
   "Am7": { f: "x02010", d: "--2-1-", g: "Menores" },
+  "Dm7": { f: "xx0211", d: "---211", g: "Menores" },
   // Séptimas y suspendidos
   "A7":  { f: "x02020", d: "--2-3-", g: "Séptimas y sus" },
   "D7":  { f: "xx0212", d: "---213", g: "Séptimas y sus" },
@@ -33,6 +34,8 @@ export const CHORDS = {
   "G5":  { f: "355xxx", d: "134---", g: "Power chords" },
   "B5":  { f: "x244xx", d: "-134--", g: "Power chords" },
   "C5":  { f: "x355xx", d: "-134--", g: "Power chords" },
+  "Bb5": { f: "x133xx", d: "-134--", g: "Power chords" },
+  "C#5": { f: "x466xx", d: "-134--", g: "Power chords" },
   // Cejilla
   "F":   { f: "133211", d: "134211", g: "Cejilla" },
   "Fm":  { f: "133111", d: "134111", g: "Cejilla" },
@@ -41,6 +44,9 @@ export const CHORDS = {
   "Gm":  { f: "355333", d: "134111", g: "Cejilla" },
   "Cm":  { f: "x35543", d: "-13421", g: "Cejilla" },
   "F#m": { f: "244222", d: "134111", g: "Cejilla" },
+  "F#":  { f: "244322", d: "134211", g: "Cejilla" },
+  "C#m": { f: "x46654", d: "-13421", g: "Cejilla" },
+  "G#m": { f: "466444", d: "134111", g: "Cejilla" },
 };
 export const GROUPS = ["Mayores", "Menores", "Séptimas y sus", "Power chords", "Cejilla"];
 

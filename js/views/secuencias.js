@@ -4,6 +4,7 @@ import { data, save, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { classify } from "../detect.js";
+import { LIBRARY } from "../plan.js";
 
 let el;
 const BEATS = [1, 2, 3, 4, 6, 8];
@@ -35,12 +36,26 @@ export function parseChords(text) {
   return { acordes: out, bad };
 }
 function ensure() {
-  if (Array.isArray(data.secuencias)) return;
-  data.secuencias = PRESETS.map((p, i) => {
-    const song = (data.canciones || []).find(s => s.titulo === p.cancion);
-    return { id: "q" + i, nombre: p.nombre, cancion: song ? song.id : null, acordes: parseChords(p.acordes).acordes, bpm: p.bpm, auto: true, hist: [], fallos: {} };
-  });
-  save();
+  let changed = false;
+  if (!Array.isArray(data.secuencias)) {
+    data.secuencias = PRESETS.map((p, i) => {
+      const song = (data.canciones || []).find(s => s.titulo === p.cancion);
+      return { id: "q" + i, nombre: p.nombre, cancion: song ? song.id : null, acordes: parseChords(p.acordes).acordes, bpm: p.bpm, auto: true, hist: [], fallos: {} };
+    });
+    changed = true;
+  }
+  // Secuencias de la biblioteca de canciones (solo una vez cada una: si la borras, no regresa)
+  data.agregado = data.agregado || { canciones: [], secuencias: [] };
+  data.agregado.secuencias = data.agregado.secuencias || [];
+  LIBRARY.forEach((L, i) => (L.secuencias || []).forEach((sq, j) => {
+    const key = L.titulo + "::" + sq.nombre;
+    if (data.agregado.secuencias.includes(key)) return;
+    data.agregado.secuencias.push(key); changed = true;
+    const song = (data.canciones || []).find(s => s.titulo === L.titulo);
+    if (!song) return;
+    data.secuencias.push({ id: `l${i}-${j}`, nombre: `${L.titulo} · ${sq.nombre}`, cancion: song.id, acordes: parseChords(sq.acordes).acordes, bpm: sq.bpm || 60, auto: true, hist: [], fallos: {} });
+  }));
+  if (changed) save();
 }
 const list = () => data.secuencias || [];
 const cur = () => list().find(q => q.id === data.ajustes.secId) || list()[0];
@@ -238,7 +253,7 @@ async function toggle() {
     if (!A.mic.an) { $("#sqLab", el).textContent = "Silencia las cuerdas"; $("#sqNext", el).textContent = "Midiendo el ruido del cuarto…"; }
     if (!(await A.micOn())) { toast(A.mic.error || "No se pudo usar el micrófono"); idle(); return; }
   }
-  window.dispatchEvent(new Event("riff:stop-audio"));
+  window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-rasgueo"));
   $("#sqResult", el).hidden = true;
   P.bpm = q.bpm; const beat = 60 / P.bpm;
   P.segs = []; let acc = 0;

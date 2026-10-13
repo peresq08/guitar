@@ -103,7 +103,7 @@ export async function keepAwake(on) {
 // El umbral de "hay sonido" se adapta solo: baja de inmediato en cuanto hay un momento de silencio
 // (así se corrige si al activar el micrófono la guitarra estaba sonando) y sube despacio si el cuarto se vuelve más ruidoso.
 const NOISE_CAP = .003, GATE_MIN = .0003;
-export const mic = { an: null, tb: null, fb: null, noise: .0005, sens: 2.5, error: "" };
+export const mic = { an: null, src: null, tb: null, fb: null, noise: .0005, sens: 2.5, error: "" };
 export const SENS = { alta: 1.8, media: 2.5, baja: 4 };
 export function setSensitivity(k) { mic.sens = SENS[k] || SENS.media; }
 export function gate() { return Math.max(mic.noise * mic.sens, GATE_MIN); }
@@ -128,7 +128,7 @@ export async function micOn() {
   try {
     const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     const src = a.createMediaStreamSource(st); const an = a.createAnalyser(); an.fftSize = 8192; an.smoothingTimeConstant = .35;
-    src.connect(an); mic.an = an; mic.tb = new Float32Array(an.fftSize); mic.fb = new Float32Array(an.frequencyBinCount);
+    src.connect(an); mic.an = an; mic.src = src; mic.tb = new Float32Array(an.fftSize); mic.fb = new Float32Array(an.frequencyBinCount);
   } catch (e) { mic.error = "Sin permiso para el micrófono. Actívalo en la configuración del navegador para esta página."; return false; }
   await new Promise(r => setTimeout(r, 250));   // deja que el búfer se llene
   await measureNoise(1000);
@@ -183,4 +183,51 @@ export function pitch() {
   const y0 = nsdf[L - 1], y1 = nsdf[L], y2 = nsdf[L + 1], den = y0 - 2 * y1 + y2;
   const shift = den ? .5 * (y0 - y2) / den : 0;
   return { rms, f: sr / (L + shift), clarity: c };
+}
+
+/* ---- Rasgueo: golpe apagado y detección de golpes por micrófono ---- */
+export function chuck(t, vol = .4) {
+  const a = ctx(), s = a.createBufferSource(); s.buffer = noise();
+  const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 2200; f.Q.value = .8;
+  const g = a.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + .06);
+  s.connect(f).connect(g).connect(master); s.start(t, Math.random() * .5); s.stop(t + .08);
+  const o = a.createOscillator(), og = a.createGain(); o.frequency.value = 140;
+  og.gain.setValueAtTime(vol * .5, t); og.gain.exponentialRampToValueAtTime(.001, t + .05);
+  o.connect(og).connect(master); o.start(t); o.stop(t + .06);
+}
+// Detecta el ataque de cada golpe con la energía de alta frecuencia (la diferencia entre muestras),
+// comparada con el mínimo de los últimos ~25 ms y la mediana de los últimos ~90 ms.
+// Llama cb(tiempo en el reloj de audio). Probado con rasgueos simulados de pop, funk, galope y reggae.
+let onsetProc = null;
+export function startOnsets(cb) {
+  const a = ctx(); if (!a || !mic.src) return false;
+  stopOnsets();
+  const HOP = 128, LOOK = 8, LONG = 30, REFR = .045, sr = a.sampleRate;
+  const hist = []; let prevX = 0, lastT = -1, hfNoise = 1e-3, warm = 0;
+  const proc = a.createScriptProcessor(1024, 1, 1);
+  proc.onaudioprocess = ev => {
+    const x = ev.inputBuffer.getChannelData(0), tEnd = a.currentTime;
+    for (let h = 0; h + HOP <= x.length; h += HOP) {
+      let e = 0;
+      for (let n = h; n < h + HOP; n++) { const d = x[n] - prevX; prevX = x[n]; e += d * d; }
+      e /= HOP;
+      if (e > 1e-12) { if (e < hfNoise) hfNoise = e; else hfNoise *= 1.0002; }
+      if (hist.length >= LONG) {
+        const t = tEnd - (x.length - h) / sr;
+        let mn = Infinity; for (let k = hist.length - LOOK; k < hist.length; k++) mn = Math.min(mn, hist[k]);
+        const md = hist.slice().sort((p, q) => p - q)[hist.length >> 1];
+        if (warm > 20 && e > 4 * mn && e > 2 * md && e > 6 * hfNoise * (mic.sens / 2.5) && t - lastT > REFR) { lastT = t; cb(t); }
+      }
+      hist.push(e); if (hist.length > LONG) hist.shift(); warm++;
+    }
+  };
+  const mute = a.createGain(); mute.gain.value = 0;
+  mic.src.connect(proc); proc.connect(mute).connect(a.destination);
+  onsetProc = { proc, mute };
+  return true;
+}
+export function stopOnsets() {
+  if (!onsetProc) return;
+  try { mic.src.disconnect(onsetProc.proc); onsetProc.proc.disconnect(); onsetProc.mute.disconnect(); } catch (e) {}
+  onsetProc.proc.onaudioprocess = null; onsetProc = null;
 }
