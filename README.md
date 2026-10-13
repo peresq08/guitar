@@ -24,7 +24,7 @@ En el celular abre esa dirección y usa **Agregar a pantalla de inicio**.
 
 ## En laptop
 
-En pantallas anchas el menú pasa a un costado y cada sección usa dos columnas. En Practicar, todo lo que se usa durante una ronda (acorde actual y siguiente, carril, tempo y botón) cabe en una pantalla, sin desplazarse. Atajos: **Espacio** inicia o pausa lo principal de la sección (rutina, reto, metrónomo, Jam, afinador) y **1–5** cambian de sección.
+En pantallas anchas el menú pasa a un costado y cada sección usa dos columnas. En Practicar, todo lo que se usa durante una ronda (acorde actual y siguiente, carril, tempo y botón) cabe en una pantalla, sin desplazarse. Atajos: **Espacio** inicia o pausa lo principal de la sección (rutina, reto, metrónomo, Jam, afinador), **1–5** cambian de sección y **F** activa la pantalla completa en Practicar.
 
 ## Diseño
 
@@ -105,6 +105,14 @@ En **Practicar → Tabs** importas una tab y la aprendes nota por nota:
 - Incluye cuatro ejercicios: pentatónica de La menor, arpegios, un riff en Mi y ligados.
 
 Las tabs importadas se guardan **solo en tu dispositivo** (no están en este repositorio ni se suben a ningún lado) y viajan en el respaldo de Progreso.
+
+## Pantalla completa y más espacio
+
+En la computadora, dentro de Practicar:
+
+- **Pantalla completa** (botón arriba a la derecha o tecla **F**): deja solo el panel de práctica y el carril o la tab crecen para usar todo el alto. Se sale con **Esc**, **F** o el botón *Salir*.
+- **Panel**: oculta la columna de la derecha (lista de tabs, editor, estadísticas) para que la práctica use todo el ancho. Se recuerda.
+- **Contraer** (abajo en el menú lateral): deja el menú solo con íconos.
 
 ## Carril más grande
 

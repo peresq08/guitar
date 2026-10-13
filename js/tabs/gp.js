@@ -27,7 +27,7 @@ export function listTracks(score) {
     if (!notas) return null;
     const cuerdas = st.tuning.length;
     const std = stdTuning(cuerdas).every((m, k) => m === st.tuning[k]);
-    return { i, nombre: tr.name || `Pista ${i + 1}`, cuerdas, notas, afinacion: std ? "Estándar" : (st.tuningName || tuningLabel(st.tuning)), capo: st.capo || 0 };
+    return { i, nombre: fixText(tr.name) || `Pista ${i + 1}`, cuerdas, notas, afinacion: std ? "Estándar" : (st.tuningName || tuningLabel(st.tuning)), capo: st.capo || 0 };
   }).filter(Boolean);
 }
 const NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
@@ -108,4 +108,22 @@ export function tracksForBacking(score) {
     ev.sort((a, b) => a[0] - b[0]);
     return { i, nombre: name, tipo, vol: Math.max(.2, Math.min(1, (tr.playbackInfo?.volume ?? 13) / 16)), ev };
   }).filter(Boolean);
+}
+
+// Algunos archivos guardan los textos en UTF-8 aunque el formato espera Windows-1252; entonces "VIOLÃO" se lee
+// "VIOLÃƒO". Si el texto vuelve a armarse como UTF-8 válido, se corrige; si no, se deja igual.
+const CP1252 = { 0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F };
+export function fixText(s) {
+  if (typeof s !== "string" || !/[ÃÂÅÆÐÑ][\u0080-¿Œ-™]/.test(s)) return s;
+  const bytes = [];
+  for (const ch of s) { const c = ch.codePointAt(0); if (c < 256) bytes.push(c); else if (CP1252[c]) bytes.push(CP1252[c]); else return s; }
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array(bytes)); } catch (e) { return s; }
+}
+export function fixTabTexts(t) {
+  let changed = false;
+  const f = v => { const r = fixText(v); if (r !== v) changed = true; return r; };
+  t.titulo = f(t.titulo); t.artista = f(t.artista); t.pista = f(t.pista);
+  (t.compases || []).forEach(c => { if (c.sec) c.sec = f(c.sec); });
+  (t.acomp || []).forEach(x => x.nombre = f(x.nombre));
+  return changed;
 }

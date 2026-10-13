@@ -692,3 +692,51 @@ select optgroup{font-weight:700;color:var(--muted)}
   [data-lane="enorme"] .tabstaff{height:200px}
   [data-lane="enorme"] .tabstaff.shapes{height:220px}
 }
+
+/* Herramientas de vista (Practicar): ocultar panel y pantalla completa */
+.viewtools{display:none}
+.navtoggle,.focus-exit{display:none}
+@media (min-width:1000px){
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .viewtools:not([hidden]){display:flex;gap:6px;margin-left:auto;margin-right:18px}
+  .vt{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 .88rem var(--body);cursor:pointer}
+  .vt svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .vt[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+  .vt:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+  /* menú contraído: solo íconos */
+  .navtoggle{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:600 .88rem var(--body);cursor:pointer}
+  .navtoggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+  .navtoggle:hover{background:var(--panel);color:var(--ink)}
+  .nav-mini{--side:72px}
+  .nav-mini .tabbar{padding-inline:10px}
+  .nav-mini .tabbar button[data-view]{font-size:0;justify-content:center;padding:0;gap:0}
+  .nav-mini .tabbar button[data-view] svg{width:24px;height:24px}
+  .nav-mini .navtoggle{justify-content:center;padding:0}
+  .nav-mini .navtoggle span{display:none}
+  .nav-mini .navtoggle svg{transform:rotate(180deg)}
+  .nav-mini .kbd-hint{display:none}
+  /* panel derecho oculto: la práctica usa todo el ancho */
+  .side-hidden #v-practicar .cols{grid-template-columns:minmax(0,1fr)!important}
+  .side-hidden #v-practicar .cols > .col:nth-child(2){display:none}
+  .side-hidden #v-practicar .view, .side-hidden #v-practicar{max-width:none}
+}
+.kbd-hint{order:1}
+.navtoggle{order:2}
+
+/* Pantalla completa: solo el panel de práctica, y el carril o la tab crecen con el espacio libre */
+.focus .top,.focus .tabbar,.focus #v-practicar .subtabs{display:none!important}
+.focus main{margin-left:0!important;padding:12px!important;max-width:none}
+.focus #v-practicar{max-width:none}
+.focus #v-practicar .cols{display:block!important}
+.focus #v-practicar .cols > .col:nth-child(2){display:none}
+.focus #v-practicar .deck-panel{position:static;height:calc(100vh - 24px);max-height:none;overflow:auto;display:flex;flex-direction:column}
+.focus #v-practicar .deck{flex:1 1 auto;min-height:0}
+.focus #v-practicar :is(#cHwy,#sqHwy,#rgHwy,#tbStaffBox):not([hidden]){flex:1 1 auto;min-height:150px;display:flex;flex-direction:column}
+.focus #v-practicar :is(#cHwy,#sqHwy,#rgHwy,#tbStaffBox) > :is(.hwy,.tabstaff){flex:1 1 auto;height:auto!important;min-height:150px}
+.focus body{padding-bottom:0}
+.focus-exit{position:fixed;top:14px;right:16px;z-index:40;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(18,23,29,.9);color:#eef1f5;font:600 .88rem var(--body);cursor:pointer;opacity:.7}
+.focus-exit:hover,.focus-exit:focus-visible{opacity:1}
+.focus-exit svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.focus .focus-exit:not([hidden]){display:inline-flex}
+.focus .deck-top{padding-right:96px}
+@media (min-width:1000px) and (max-width:1599px){ .vt span{display:none} .vt{padding:0 9px} }

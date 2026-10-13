@@ -33,7 +33,10 @@ export const staffHeight = (S, shapes, k = laneScale()) => (shapes ? TOP_SHAPES 
 
 // Dibuja la tab en el contexto g. o: { tab, w, h, off, cur, status, playX, labels, x0 (inicio visible) }
 export function paint(g, L, o) {
-  const { tab, w, h } = o, off = o.off || 0, status = o.status || new Map(), TOP = o.shapes?.length ? TOP_SHAPES : TOP0;
+  const { tab, w, h } = o, off = o.off || 0, status = o.status || new Map();
+  const K0 = L.k || 1, S0 = tab.cuerdas, top0 = o.shapes?.length ? TOP_SHAPES : TOP0;
+  // si sobra alto (pantalla completa), centra las cuerdas verticalmente
+  const spare = h - top0 - BOTTOM - (S0 - 1) * ROW * K0, TOP = top0 + Math.max(0, spare / 2);
   const labY = o.shapes?.length ? TOP - 40 : TOP - 20;
   const K = L.k || 1;
   const S = tab.cuerdas, rowH = Math.min(ROW * K, (h - TOP - BOTTOM) / Math.max(1, S - 1)), Y = s => TOP + s * rowH, yLow = Y(S - 1);
@@ -52,7 +55,7 @@ export function paint(g, L, o) {
   }
   for (const s of L.secs) {
     if (!vis(s.x + 80)) continue;
-    g.font = `800 13px ${DISPLAY}`; g.fillStyle = "#f2a33a"; g.textAlign = "left"; g.fillText(s.text, s.x + 24, labY);
+    g.font = `800 ${Math.round(13 * Math.min(K0, 1.5))}px ${DISPLAY}`; g.fillStyle = "#f2a33a"; g.textAlign = "left"; g.fillText(s.text, s.x + 24, labY);
   }
   // formas de acorde: "C" con una línea que abarca las notas que caben en esa forma
   if (o.shapes?.length) {
@@ -62,8 +65,8 @@ export function paint(g, L, o) {
       const a = byI.get(sh.i), b = byI.get(sh.j); if (!a || !b) continue;
       const xa = a.x - 10, xb = b.x + 10; if (xb < off - 20 || xa > off + w) continue;
       const y = TOP - 22, on = o.cur >= sh.i && o.cur <= sh.j;
-      g.font = `800 14px ${DISPLAY}`; const tw = g.measureText(sh.name).width + 12;
-      g.fillStyle = on ? "rgba(242,163,58,.95)" : "rgba(242,163,58,.16)"; roundRect(g, xa, y - 9, tw, 18, 6); g.fill();
+      const ps = Math.min(K0, 1.5); g.font = `800 ${Math.round(14 * ps)}px ${DISPLAY}`; const tw = g.measureText(sh.name).width + 12;
+      g.fillStyle = on ? "rgba(242,163,58,.95)" : "rgba(242,163,58,.16)"; roundRect(g, xa, y - 9 * ps, tw, 18 * ps, 6); g.fill();
       g.fillStyle = on ? "#1c1306" : "#ffc46b"; g.fillText(sh.name, xa + 6, y + 1);
       if (xb - xa > tw + 6) { g.strokeStyle = on ? "rgba(242,163,58,.8)" : "rgba(242,163,58,.35)"; g.beginPath(); g.moveTo(xa + tw + 4, y + .5); g.lineTo(xb, y + .5); g.moveTo(xb, y - 4); g.lineTo(xb, y + 5); g.stroke(); }
     }
@@ -78,10 +81,10 @@ export function paint(g, L, o) {
     gr.addColorStop(0, "rgba(242,163,58,.10)"); gr.addColorStop(.5, "rgba(242,163,58,.22)"); gr.addColorStop(1, "rgba(242,163,58,.10)");
     g.fillStyle = gr; roundRect(g, curIt.x - 16 - curIt.w * 3, Y(0) - 13, 32 + curIt.w * 6, (S - 1) * rowH + 26, 9); g.fill();
   }
-  const fs = Math.max(11, Math.min(14 * K, rowH * .66));
+  const fs = Math.max(11, Math.min(14 * K, rowH * .7));
   const tw = (it, n) => (labelOf(n).length) * fs * .62 + 6;
   // Palm mute: "P.M." con línea punteada bajo los eventos seguidos que lo llevan
-  g.font = `800 11px ${BODY}`; g.textAlign = "left"; g.textBaseline = "middle";
+  g.font = `800 ${Math.round(11 * Math.min(K, 1.6))}px ${BODY}`; g.textAlign = "left"; g.textBaseline = "middle";
   for (let k = 0; k < L.items.length; k++) {
     const isPM = it => it && it.e.n.some(n => n[3].includes("m"));
     if (!isPM(L.items[k]) || isPM(L.items[k - 1])) continue;
@@ -153,7 +156,7 @@ export class TabStaff {
     zb.onclick = e => { e.stopPropagation(); cycleLane(); }; this.wrap.appendChild(zb);
     this.tab = null; this.L = { items: [], bars: [], secs: [], width: 0 }; this.cur = -1; this.status = new Map(); this.off = 0; this.target = 0; this.raf = 0; this.onPick = onPick;
     new ResizeObserver(() => {
-      if (this.tab && this.L.k !== laneScale()) { this.L = layout(this.tab, this.rng[0], this.rng[1]); }
+      if (this.tab && Math.abs(this.L.k - this.scale()) > .04) { this.L = layout(this.tab, this.rng[0], this.rng[1], this.scale()); }
       this.follow(true); this.draw();
     }).observe(this.wrap);
     this.canvas.addEventListener("click", e => {
@@ -164,11 +167,17 @@ export class TabStaff {
     });
   }
   get items() { return this.L.items; }
+  // Escala: la del ajuste de tamaño, o más si la tab tiene más alto disponible (pantalla completa)
+  scale() {
+    const h = this.wrap.clientHeight, S = this.tab?.cuerdas || 6, top = this.shapes?.length ? TOP_SHAPES : TOP0;
+    const fit = h ? (h - top - BOTTOM) / Math.max(1, S - 1) / ROW : 1;
+    return Math.round(Math.max(laneScale(), Math.min(2.2, fit)) * 20) / 20;
+  }
   get width() { return this.L.width; }
   // Muestra los eventos [from, to] de la tab (índices de tab.ev)
   set(tab, from, to) {
     this.tab = tab; this.status = new Map(); this.rng = [from, to];
-    this.L = tab ? layout(tab, from, to) : { items: [], bars: [], secs: [], width: 0 };
+    this.L = tab ? layout(tab, from, to, this.scale()) : { items: [], bars: [], secs: [], width: 0 };
     this.cur = -1; this.off = this.target = 0; this.draw();
   }
   // Modo con tempo: la vista avanza continua; x es la posición del "ahora" en la tab
@@ -186,7 +195,7 @@ export class TabStaff {
     return a + (b - a) * Math.max(0, Math.min(1, frac));
   }
   setLabels(afin) { this.labels = afin; this.draw(); }
-  setShapes(list) { this.shapes = list || []; this.wrap.classList.toggle("shapes", !!this.shapes.length); this.draw(); }
+  setShapes(list) { this.shapes = list || []; this.wrap.classList.toggle("shapes", !!this.shapes.length); if (this.tab) this.L = layout(this.tab, this.rng[0], this.rng[1], this.scale()); this.draw(); }
   setCursor(i, instant = false) { this.cur = i; this.follow(instant); }
   mark(i, st) { this.status.set(i, st); this.kick(); }
   clearMarks() { this.status.clear(); this.kick(); }

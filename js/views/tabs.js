@@ -5,7 +5,7 @@
 import { data, save, tabs, saveTabs, toast, esc, logSession, $ } from "../store.js";
 import * as A from "../audio.js";
 import { parseTextTab, stdTuning } from "../tabs/texto.js";
-import { loadAlphaTab, readScore, listTracks, guessTrack, trackToTab, tuningLabel, tracksForBacking } from "../tabs/gp.js";
+import { loadAlphaTab, readScore, listTracks, guessTrack, trackToTab, tuningLabel, tracksForBacking, fixTabTexts, fixText } from "../tabs/gp.js";
 import { TabStaff, fretMini, noteName, pcName, stringName, renderFullTab } from "../ui/tabstaff.js";
 import { findShapes, shapeHint } from "../tabs/formas.js";
 import { Feedback, swapText } from "../ui/highway.js";
@@ -102,6 +102,8 @@ function range(t) {
 let el, staff, fb;
 export function mountTabs(container) {
   el = container;
+  // corrige textos mal leídos (acentos) de tabs importadas antes
+  if (tabs.map(fixTabTexts).some(Boolean)) saveTabs();
   el.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
   <div class="col">
@@ -381,12 +383,13 @@ function finishImport(score, i, name) {
   if (!t.ev.length) { toast("Esa pista no tiene notas."); return; }
   // las demás pistas, para el acompañamiento (la tuya se toca con el sonido guía)
   t.acomp = tracksForBacking(score).filter(x => x.i !== i);
+  fixTabTexts(t);
   if (addTab(t)) toast(`Importada: ${t.titulo} · ${t.pista}${isStd(t) ? "" : ` · está en ${tuningName(t).long}: si tu guitarra está en estándar, cámbialo en Ajustes`}`);
 }
 function pickTrack(score, tracks, name) {
   const g = guessTrack(tracks);
   const { body } = sheet("Elige la pista");
-  body.innerHTML = `<p class="sheet-lead"><b>${esc(score.title || name)}</b>${score.artist ? " · " + esc(score.artist) : ""} trae ${tracks.length} pistas. ¿Cuál quieres aprender?</p>
+  body.innerHTML = `<p class="sheet-lead"><b>${esc(fixText(score.title) || name)}</b>${score.artist ? " · " + esc(fixText(score.artist)) : ""} trae ${tracks.length} pistas. ¿Cuál quieres aprender?</p>
     <ul class="cal-list tbtracks">${tracks.map(t => `<li><label><input type="radio" name="tbTrack" value="${t.i}" ${t.i === g.i ? "checked" : ""}>
       <span><b>${esc(t.nombre)}</b><small>${t.cuerdas} cuerdas · ${esc(t.afinacion)}${t.capo ? " · capo " + t.capo : ""} · ${t.notas} notas</small></span></label></li>`).join("")}</ul>
     <div class="row sheet-foot"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="tbTrackOk">Importar pista</button></div>`;

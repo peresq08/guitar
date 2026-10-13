@@ -24,13 +24,35 @@ export function go(view, opts = {}) {
   current = view;
   $$(".tabbar button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   $$(".view").forEach(v => v.hidden = v.id !== "v-" + view);
+  $("#viewTools").hidden = view !== "practicar";
+  if (view !== "practicar") setFocus(false);
   VIEWS[view].onShow?.(opts);
   try { sessionStorage.setItem("riff-view", view); } catch (e) {}
   window.scrollTo({ top: 0 });
 }
 window.addEventListener("riff:go", e => go(e.detail.view, e.detail.opts || {}));
 
-$$(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
+$$(".tabbar button[data-view]").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
+
+/* Menú contraído, panel derecho oculto y pantalla completa para practicar (en computadora) */
+const root = document.documentElement, pref = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} };
+function setNavMini(on) { root.classList.toggle("nav-mini", on); pref("riff-nav-mini", on ? "1" : ""); const b = $("#navToggle"); b.setAttribute("aria-label", on ? "Expandir el menú" : "Contraer el menú"); b.title = b.getAttribute("aria-label"); window.dispatchEvent(new Event("resize")); }
+function setSideHidden(on) { root.classList.toggle("side-hidden", on); pref("riff-side-hidden", on ? "1" : ""); $("#tgSide").setAttribute("aria-pressed", on); }
+function setFocus(on) {
+  if (on === root.classList.contains("focus")) return;
+  root.classList.toggle("focus", on); $("#focusExit").hidden = !on;
+  try {
+    if (on && document.fullscreenEnabled && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  } catch (e) {}
+  window.scrollTo({ top: 0 });
+}
+$("#navToggle").onclick = () => setNavMini(!root.classList.contains("nav-mini"));
+$("#tgSide").onclick = () => setSideHidden(!root.classList.contains("side-hidden"));
+$("#tgFocus").onclick = () => setFocus(true);
+$("#focusExit").onclick = () => setFocus(false);
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && root.classList.contains("focus")) setFocus(false); });
+setNavMini(pref("riff-nav-mini") === "1"); setSideHidden(pref("riff-side-hidden") === "1");
 
 // Atajos de teclado (útiles en laptop): Espacio inicia o pausa lo principal de la vista; 1–5 cambian de sección.
 document.addEventListener("keydown", e => {
@@ -39,6 +61,8 @@ document.addEventListener("keydown", e => {
   if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || t?.isContentEditable) return;
   const order = ["hoy", "practicar", "afinador", "acordes", "progreso"];
   if (/^[1-5]$/.test(e.key)) { go(order[+e.key - 1]); e.preventDefault(); return; }
+  if ((e.key === "f" || e.key === "F") && current === "practicar") { setFocus(!root.classList.contains("focus")); e.preventDefault(); return; }
+  if (e.key === "Escape" && root.classList.contains("focus") && !document.querySelector(".sheet-wrap")) { setFocus(false); return; }
   if (e.code === "Space" && !(tag === "BUTTON" || tag === "A" || tag === "SUMMARY")) {
     const btn = [...document.querySelectorAll("#v-" + current + " [data-primary]")].find(b => b.offsetParent !== null && !b.disabled);
     if (btn) { e.preventDefault(); btn.click(); }

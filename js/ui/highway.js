@@ -60,7 +60,7 @@ export class Highway {
     const C = this.palette(), now = this.clock ? this.clock() : 0, nx = Math.round(w * NOW_FRAC);
     const PAST = this.past, FUTURE = this.future;
     const X = t => t <= now ? nx - (now - t) / PAST * nx : nx + (t - now) / FUTURE * (w - nx);
-    const k = laneScale(), laneA = { y: 20, h: h - 20 - 28 }, laneB = { y: h - 21, h: 13 };
+    const k = Math.max(laneScale(), Math.min(2.2, h / 150)), laneA = { y: 20, h: h - 20 - 28 }, laneB = { y: h - 21, h: 13 };
     const DISPLAY = '"Big Shoulders Display", "Barlow Condensed", system-ui, sans-serif';
     // Fondo: pasado apagado a la izquierda, futuro con un leve brillo hacia la línea
     let bg = g.createLinearGradient(0, 0, w, 0);
