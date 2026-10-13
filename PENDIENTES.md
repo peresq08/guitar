@@ -14,12 +14,32 @@ Detalles a cuidar:
 - Respetar la elección del usuario: si lo desactiva, que se quede desactivado.
 - Si el navegador niega el permiso o no hay micrófono, seguir sin él y avisar una sola vez, sin bloquear la práctica.
 
-## 2. Mejorar la distribución en laptop
+## 2. Todo a la vista en laptop, sin desplazarse
 
-Revisar y pulir cómo se ve la app en pantallas anchas. Antes de cambiar, definir con el usuario qué le estorba o qué falta en cada sección.
+Problema concreto: en **Secuencias** la mitad de la pantalla queda escondida y hay que desplazarse. La meta es practicar sin tocar la laptop: todo lo que se usa durante la ronda debe verse en una sola pantalla (referencia: 1366 × 768 en adelante).
 
-Ideas de partida:
-- Aprovechar mejor el ancho en Practicar: dejar fijo el reproductor (casillas, recuadro y botón Empezar) mientras se desplaza la columna derecha.
-- Lista de patrones y de secuencias más compacta (rejilla de tarjetas en lugar de lista larga).
-- Tamaños del recuadro principal y de los diagramas acordes a pantallas grandes.
-- Revisar Hoy y Progreso para que no queden columnas con mucho espacio vacío.
+- Durante la práctica, en una sola pantalla: recuadro con el acorde actual y el siguiente, diagramas, tempo, botón Empezar/Detener y el carril de aciertos (punto 3).
+- Lo que se usa antes o después de practicar (editor de secuencias, lista de patrones, historial, ajustes del micrófono) va en la columna lateral o en paneles que se pueden plegar.
+- Aplica igual a Cambios, Rasgueo, Metrónomo y Jam; revisar también Hoy y Progreso.
+- Ideas de partida: reproductor fijo mientras se desplaza la columna derecha, listas de patrones y secuencias en rejilla compacta, tamaños de recuadro y diagramas pensados para pantalla grande.
+
+## 3. Carril de aciertos estilo Guitar Hero
+
+Ver en tiempo real si lo que tocas está bien, en todo lo que usa el micrófono.
+
+**Carril de tiempo (horizontal):**
+- A la derecha, lo que viene en los **próximos ~10 segundos**: bloques con el nombre de cada acorde, de ancho proporcional a su duración, que avanzan hacia una línea de "ahora".
+- A la izquierda, lo que tocaste en los **últimos ~30 segundos**: cada bloque se pinta según lo detectado.
+  - Verde: acorde correcto y a tiempo.
+  - Rojo: tocaste otro acorde.
+  - Gris: no se escuchó (te brincaste el cambio).
+
+**Reacción al momento, en cada cambio:**
+- Una animación corta sobre el recuadro: "¡Bien!", "Otro acorde" o "Te lo brincaste".
+- Contador de racha (cambios seguidos bien), que se reinicia al fallar.
+
+**Dónde aplica:**
+- **Cambios** (modos *Con clic* y *Escuchar*) y **Secuencias**: los bloques son acordes.
+- **Rasgueo**: los bloques son golpes (↓ ↑ ✕) y se marca cada uno como a tiempo, adelantado, atrasado o faltante.
+
+Base técnica disponible: la detección de acordes por cuadro y la de golpes ya existen (`js/detect.js`, `startOnsets` en `js/audio.js`), y la calificación de Secuencias ya evalúa cada acorde en su ventana de tiempo.
