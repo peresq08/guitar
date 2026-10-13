@@ -593,3 +593,57 @@ select optgroup{font-weight:700;color:var(--muted)}
   background:radial-gradient(80% 80% at 50% 40%,rgba(65,209,132,.22),rgba(12,16,21,.94));backdrop-filter:blur(3px);animation:fadein .2s ease-out;z-index:3}
 .lgo b{display:block;font-family:var(--display);font-size:2rem;font-weight:900;color:#fff}
 .lgo span{color:var(--ink)}
+
+/* Tabs y riffs */
+.tabstaff{position:relative;height:172px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#0e1318,#0b0f13);overflow:hidden;cursor:pointer}
+.tabstaff canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tbstage{grid-template-columns:minmax(0,1fr) auto}
+.tbstage .now{align-items:center;gap:16px}
+.tbnote{all:unset;cursor:pointer;font-family:var(--display);font-weight:900;font-size:4.4rem;line-height:.9;color:#fff;text-shadow:0 0 28px rgba(242,163,58,.3);min-width:1.1em;text-align:center;font-variant-numeric:tabular-nums;border-radius:10px;padding:0 4px}
+.tbnote:focus-visible{outline:3px solid var(--accent)}
+.tbnote.multi{font-size:2.3rem}
+.tbwhere{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tbwhere b{font-size:1.15rem;color:var(--ink);display:flex;flex-wrap:wrap;gap:6px}
+.tbwhere > span{color:var(--muted);font-size:.92rem}
+.tbchip{display:inline-flex;align-items:baseline;gap:4px;padding:2px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.04);font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;color:var(--muted)}
+.tbchip i{font-style:normal;color:var(--accent);font-weight:800;font-size:1rem}
+.tbfret{display:flex;align-items:center;justify-content:center}
+.tbfret svg{max-width:100%;height:auto}
+.tbtune select{min-height:40px;padding:6px 10px;font-size:.9rem;max-width:300px}
+.tblist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tblist li{display:flex;gap:6px;align-items:stretch}
+.tbitem{all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.tbitem b{font-family:var(--display);font-size:1.15rem;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbitem small{color:var(--muted);font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbitem:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.tbitem:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.tblist li.on .tbitem{border-color:var(--accent);background:var(--soft)}
+.tblist .icon-btn{height:auto;min-height:44px;width:44px;font-size:1rem}
+.icon-btn.danger{width:auto;padding:0 10px;font-size:.85rem;font-weight:700;color:var(--led);border-color:var(--led)}
+.tbdrop{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border:1.5px dashed var(--line);border-radius:12px}
+.tbdrop.over{border-color:var(--accent);background:var(--soft)}
+.tbdrop label.btn{cursor:pointer}
+#tbImport details{border-top:1px solid var(--line);padding-top:10px}
+#tbImport summary{cursor:pointer;font-weight:700}
+#tbImport ul{margin:8px 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+#tbText{width:100%;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.82rem;line-height:1.35;white-space:pre;overflow-x:auto}
+.tbtracks label{display:flex;gap:10px;align-items:center;cursor:pointer;width:100%}
+.tbtracks label span{display:flex;flex-direction:column;gap:2px}
+.tbtracks small{color:var(--muted)}
+.tbtracks input{accent-color:var(--amber-2);width:18px;height:18px}
+@media (max-width:640px){
+  .tbstage{grid-template-columns:1fr}
+  .tbnote{font-size:3.6rem}
+  .tabstaff{height:160px}
+}
+@media (min-width:1000px) and (max-height:760px){
+  .tabstaff{height:128px}
+  .tbnote{font-size:3.3rem}
+  .tbstage{min-height:0}
+  .tbstage .tbfret{margin-top:34px}
+  .tbfret svg{max-height:96px;width:auto}
+  #tbProg:has(.tbhint){display:none}
+}
+#tbStage .fbk{top:8px;right:10px}
+.tbstage .tbfret{margin-top:46px}
+@media (max-width:640px){ .tbstage .tbfret{margin-top:0;justify-content:flex-start} }

@@ -9,7 +9,7 @@ import { theoTemplate } from "../detect.js";
 const wait = ms => new Promise(r => setTimeout(r, ms));
 let open = null;
 
-function sheet(title, onClose) {
+export function sheet(title, onClose) {
   close();
   const wrap = document.createElement("div"); wrap.className = "sheet-wrap";
   wrap.innerHTML = `<div class="sheet screen" role="dialog" aria-modal="true" aria-label="${esc(title)}">

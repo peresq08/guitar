@@ -7,7 +7,7 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | Sección | Para qué sirve |
 |---|---|
 | **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel y el tiempo que tengas. |
-| **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, metrónomo progresivo y Jam con batería y bajo. |
+| **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, tabs y riffs nota por nota, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
 | **Acordes** | 43 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
 | **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 64 canciones de rock, pop, metal, grunge, reggae y country (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
@@ -87,6 +87,19 @@ En **Practicar → Rasgueo** hay 14 patrones: negras, pop básico, balada, count
 - **Con el micrófono**, la app detecta cada golpe y te dice cuántos cayeron a tiempo, qué tan parejo vas (en milisegundos) y qué parte del patrón se adelanta o se atrasa (por ejemplo: "las 'a' llegan 27 ms tarde"). Solo sube el tempo cuando el ritmo es sólido.
 - **Crea tus propios patrones** tocando las casillas.
 
+## Tabs y riffs
+
+En **Practicar → Tabs** importas una tab y la aprendes nota por nota:
+
+- **Archivos de Guitar Pro** (.gp, .gp3, .gp4, .gp5, .gpx) **y MusicXML**: traen cada nota con su cuerda, traste, duración, tempo y secciones (Intro, Verso, Solo…). Si el archivo tiene varias pistas, eliges cuál (la app sugiere la guitarra principal). El lector es [alphaTab](https://alphatab.net) (MPL-2.0); se descarga la primera vez que importas y después funciona sin conexión.
+- **Tabs de texto**: copia la tab de una página (los renglones `e|--0--3--|`) y pégala. Detecta afinación por las etiquetas, compases, secciones como `[Intro]`, ligados (h, p), slides, bends y notas muertas.
+- **Aprender**: la tab se ve como pentagrama que se desliza solo, con la nota actual en ámbar y un diapasón con la posición de esta nota y la siguiente. Al escuchar la nota correcta por el micrófono avanza (si repites la misma nota, espera un ataque nuevo); con acordes compara todas las notas a la vez. Al terminar la sección te dice tu paso (segundos por nota) y qué notas te costaron.
+- **Escuchar** toca la sección al 50, 75 o 100% de velocidad, y tocar el número grande repite la nota actual.
+- Si la tab está en otra afinación (por ejemplo, medio tono abajo) y tu guitarra está en estándar, elige *Guitarra en afinación estándar* y la app ajusta lo que espera escuchar.
+- Incluye cuatro ejercicios: pentatónica de La menor, arpegios, un riff en Mi y ligados.
+
+Las tabs importadas se guardan **solo en tu dispositivo** (no están en este repositorio ni se suben a ningún lado) y viajan en el respaldo de Progreso.
+
 ## Bocinas y eco
 
 Si practicas con bocinas, el micrófono puede escuchar el clic y el sonido guía. Por eso la app activa la **cancelación de eco** del navegador (la misma de las videollamadas) y en **Micrófono y calibración** tiene una **prueba de bocinas**: toca un rasgueo corto y mide si llega al micrófono. Si llega, usa audífonos con el sonido guía o desactívalo cuando quieras que la app te califique.
@@ -112,6 +125,8 @@ js/audio.js           Clic, guitarra sintetizada, batería, bajo y micrófono
 js/chords.js          Acordes, diagramas y diapasón
 js/plan.js            Niveles, metas, repertorio inicial y rutina
 js/views/*.js         Una sección por archivo
+js/tabs/*.js          Lectura de tabs de texto y de Guitar Pro / MusicXML
+js/ui/tabstaff.js     Pentagrama de tablatura y diapasón
 sw.js                 Funcionamiento sin conexión
 ```
 

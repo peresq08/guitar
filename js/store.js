@@ -44,13 +44,23 @@ export function save() {
 }
 export function onChange(fn) { listeners.add(fn); }
 
+// Tabs importadas: van en su propia llave porque pueden pesar más que el resto de los datos.
+// Se quedan en este dispositivo (no se suben a ningún lado) y viajan en el respaldo.
+const TKEY = "riff-tabs";
+export const tabs = (() => { try { const t = JSON.parse(localStorage.getItem(TKEY) || "[]"); return Array.isArray(t) ? t : []; } catch (e) { return []; } })();
+export function saveTabs() {
+  try { localStorage.setItem(TKEY, JSON.stringify(tabs)); return true; } catch (e) { return false; }
+}
+
 export function exportJSON() {
-  return JSON.stringify(Object.assign({ exportado: new Date().toISOString(), app: "Riff" }, data), null, 2);
+  return JSON.stringify(Object.assign({ exportado: new Date().toISOString(), app: "Riff" }, data, { tabs }), null, 2);
 }
 export function importJSON(text) {
   const d = JSON.parse(text);
   if (!d || !Array.isArray(d.sesiones) || !Array.isArray(d.intentos)) throw new Error("El archivo no parece un respaldo de Riff.");
   delete d.exportado; delete d.app;
+  if (Array.isArray(d.tabs)) { tabs.splice(0, tabs.length, ...d.tabs); saveTabs(); }
+  delete d.tabs;
   data = Object.assign(DEFAULTS(), d);
   save();
 }

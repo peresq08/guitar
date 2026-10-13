@@ -4,6 +4,7 @@ import * as A from "../audio.js";
 import { mountCambios, applyCambiosOpts, refreshCambios } from "./cambios.js";
 import { mountSecuencias, showSecuencia } from "./secuencias.js";
 import { mountRasgueo, showRasgueo } from "./rasgueo.js";
+import { mountTabs, showTab, stopTabs } from "./tabs.js";
 
 let root, tab = "cambios";
 const sub = {};
@@ -15,28 +16,32 @@ export function mount(el) {
     <button role="tab" data-sub="cambios">Cambios</button>
     <button role="tab" data-sub="secuencia">Secuencias</button>
     <button role="tab" data-sub="rasgueo">Rasgueo</button>
+    <button role="tab" data-sub="tabs">Tabs</button>
     <button role="tab" data-sub="metro">Metrónomo</button>
     <button role="tab" data-sub="jam">Jam</button>
   </div>
   <div id="p-cambios" class="stack" style="gap:16px"></div>
   <div id="p-secuencia" class="stack" style="gap:16px" hidden></div>
   <div id="p-rasgueo" class="stack" style="gap:16px" hidden></div>
+  <div id="p-tabs" class="stack" style="gap:16px" hidden></div>
   <div id="p-metro" class="stack" style="gap:16px" hidden></div>
   <div id="p-jam" class="stack" style="gap:16px" hidden></div>`;
   el.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => setSub(b.dataset.sub));
-  mountCambios($("#p-cambios", el)); mountSecuencias($("#p-secuencia", el)); mountRasgueo($("#p-rasgueo", el)); mountMetro($("#p-metro", el)); mountJam($("#p-jam", el));
+  mountCambios($("#p-cambios", el)); mountSecuencias($("#p-secuencia", el)); mountRasgueo($("#p-rasgueo", el)); mountTabs($("#p-tabs", el)); mountMetro($("#p-metro", el)); mountJam($("#p-jam", el));
   setSub("cambios");
 }
 function setSub(t) {
+  if (tab === "tabs" && t !== "tabs") stopTabs();
   tab = t;
   root.querySelectorAll("[data-sub]").forEach(b => b.setAttribute("aria-selected", b.dataset.sub === t));
-  ["cambios", "secuencia", "rasgueo", "metro", "jam"].forEach(k => $("#p-" + k, root).hidden = k !== t);
+  ["cambios", "secuencia", "rasgueo", "tabs", "metro", "jam"].forEach(k => $("#p-" + k, root).hidden = k !== t);
 }
 export function onShow(opts = {}) {
   if (opts.tab) setSub(opts.tab);
   applyCambiosOpts(opts);
   if (opts.seq) showSecuencia(opts.seq);
   if (opts.pattern) showRasgueo(opts.pattern);
+  if (opts.tabId) showTab(opts.tabId);
 }
 export function refresh() { refreshCambios(); }
 export const stopOthers = () => { stopMetro(); stopJam(); };
@@ -238,4 +243,4 @@ function stopJam() {
   const min = (performance.now() - J.startedAt) / 60000;
   if (min >= 1) { data.jams = data.jams || []; data.jams.push({ t: new Date().toISOString(), min: Math.round(min * 10) / 10, estilo: J.st.id }); save(); toast(`Jam de ${Math.round(min)} min registrado`); }
 }
-export function onHide() { /* el audio sigue sonando si cambias de pestaña a propósito */ }
+export function onHide() { stopTabs(); /* el resto del audio sigue sonando si cambias de pestaña a propósito */ }

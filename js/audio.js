@@ -159,11 +159,12 @@ export function chroma() {
   }
   return { rms, chroma: norm(ch), on: rms > gate() };
 }
-// Detección de tono (NSDF / McLeod) para el afinador
-export function pitch() {
+// Detección de tono (NSDF / McLeod) para el afinador y las tabs (minF/maxF en Hz: 65–1000 para el afinador;
+// las tabs usan hasta ~1400 Hz para notas agudas de solos y desde 38 Hz para bajo)
+export function pitch({ minF = 65, maxF = 1000 } = {}) {
   const rms = level(); if (rms < gate()) return { rms, f: 0, clarity: 0 };
   const sr = ac.sampleRate, b = mic.tb, N = Math.min(b.length, 3072), off = b.length - N;
-  const minLag = Math.floor(sr / 1000), maxLag = Math.min(Math.floor(sr / 65), N - 1);
+  const minLag = Math.floor(sr / maxF), maxLag = Math.min(Math.floor(sr / minF), N - 1);
   const nsdf = new Float32Array(maxLag + 2);
   for (let lag = minLag; lag <= maxLag + 1; lag++) {
     let acf = 0, m = 0;

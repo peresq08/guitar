@@ -1,0 +1,89 @@
+// Importa archivos de Guitar Pro (.gp, .gp3, .gp4, .gp5, .gpx) y MusicXML con alphaTab
+// (https://alphatab.net, licencia MPL-2.0). La biblioteca se descarga solo la primera vez que importas un archivo
+// y después queda guardada para usarse sin conexión. El archivo se lee en tu dispositivo: no se sube a ningún lado.
+import { stdTuning } from "./texto.js";
+
+export const ALPHATAB = "https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.8.4/dist/alphaTab.core.min.mjs";
+let lib = null;
+export async function loadAlphaTab(url = ALPHATAB) {
+  if (!lib) lib = import(url).then(m => { try { m.Logger.logLevel = m.LogLevel.None; } catch (e) {} return m; }).catch(e => { lib = null; throw e; });
+  return lib;
+}
+
+export async function readScore(bytes, at) {
+  at = at || await loadAlphaTab();
+  const settings = new at.Settings();
+  try { settings.importer.encoding = "windows-1252"; } catch (e) {}
+  return at.importer.ScoreLoader.loadScoreFromBytes(bytes, settings);
+}
+
+// Pistas que se pueden practicar (con cuerdas y notas), con un resumen para elegir.
+export function listTracks(score) {
+  return score.tracks.map((tr, i) => {
+    const st = tr.staves[0];
+    if (!st || st.isPercussion || !st.tuning || !st.tuning.length) return null;
+    let notas = 0;
+    for (const bar of st.bars) for (const v of bar.voices) for (const b of v.beats) if (!b.isRest) notas += b.notes.filter(n => !n.isTieDestination).length;
+    if (!notas) return null;
+    const cuerdas = st.tuning.length;
+    const std = stdTuning(cuerdas).every((m, k) => m === st.tuning[k]);
+    return { i, nombre: tr.name || `Pista ${i + 1}`, cuerdas, notas, afinacion: std ? "Estándar" : (st.tuningName || tuningLabel(st.tuning)), capo: st.capo || 0 };
+  }).filter(Boolean);
+}
+const NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+export const tuningLabel = afin => afin.slice().reverse().map(m => NAMES[((m % 12) + 12) % 12]).join(" ");
+
+// Sugiere la pista de guitarra principal: la primera que dice guitarra/lead/solo (suele ser la del riff).
+export function guessTrack(tracks) {
+  const g = tracks.filter(t => t.cuerdas >= 6 && /(guit|gtr|lead|solo|riff|guitarra)/i.test(t.nombre));
+  return g[0] || tracks.filter(t => t.cuerdas >= 6).sort((a, b) => b.notas - a.notas)[0] || tracks[0];
+}
+
+export function trackToTab(score, i) {
+  const tr = score.tracks[i], st = tr.staves[0];
+  const afin = st.tuning.slice(), cuerdas = afin.length;
+  let bpm = score.tempo || 120;
+  const compases = score.masterBars.map(mb => {
+    const a = mb.tempoAutomations && mb.tempoAutomations.length ? mb.tempoAutomations[mb.tempoAutomations.length - 1].value : null;
+    const c = { s: mb.start, n: mb.timeSignatureNumerator, d: mb.timeSignatureDenominator };
+    if (mb.section && mb.section.text) c.sec = String(mb.section.text).trim().slice(0, 40);
+    if (a && Math.round(a) !== Math.round(bpm)) { c.bpm = Math.round(a); }
+    if (a) bpm = a;
+    if (mb.isRepeatStart) c.rep = 1;
+    if (mb.repeatCount > 1) c.x = mb.repeatCount;
+    return c;
+  });
+  const ev = [];
+  st.bars.forEach((bar, bi) => {
+    const at = new Map();
+    for (const v of bar.voices) for (const b of v.beats) {
+      if (b.isRest || !b.notes.length) continue;
+      const t = b.absolutePlaybackStart;
+      const ns = b.notes.filter(n => !n.isTieDestination && n.fret >= 0).map(n => {
+        let fl = "";
+        if (n.isHammerPullOrigin) fl += "h";
+        if (n.isHammerPullDestination || n.isLeftHandTapped) fl += "H";
+        if (n.slideOutType) fl += "/";
+        if (n.slideOrigin) fl += "S";
+        if (n.hasBend) fl += "b";
+        if (n.isDead) fl += "x";
+        if (n.isPalmMute) fl += "m";
+        if (n.vibrato) fl += "~";
+        if (n.harmonicType) fl += "*";
+        if (b.graceType) fl += "g";
+        const s = cuerdas - n.string;
+        return [s, n.fret, n.isDead ? afin[s] : n.realValueWithoutHarmonic ?? n.realValue, fl];
+      });
+      if (!ns.length) continue;
+      const e = at.get(t);
+      if (e) { for (const n of ns) if (!e.n.some(x => x[0] === n[0])) e.n.push(n); e.d = Math.max(e.d, b.playbackDuration); }
+      else at.set(t, { c: bi, t, d: b.playbackDuration, n: ns });
+    }
+    [...at.values()].sort((a, b) => a.t - b.t).forEach(e => { e.n.sort((a, b) => a[0] - b[0]); ev.push(e); });
+  });
+  return {
+    fuente: "gp", titulo: score.title || "", artista: score.artist || "", pista: tr.name || `Pista ${i + 1}`,
+    afin, cuerdas, capo: st.capo || 0, tempo: Math.round(score.tempo || 120), compases, ev,
+    notas: ev.reduce((a, e) => a + e.n.length, 0),
+  };
+}
