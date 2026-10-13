@@ -3,8 +3,9 @@
 import { data, save, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
+import { Highway, Feedback } from "../ui/highway.js";
 
-let el;
+let el, hw, fb, micWarned = false;
 // Cada casilla es una subdivisión. d/D = abajo (mayúscula = acento), u/U = arriba, x = golpe apagado, - = la mano pasa sin tocar.
 export const PATTERNS = [
   { id: "negras", nombre: "Negras", nivel: 1, spb: 2, p: "d-d-d-d-", bpm: 70, desc: "Un golpe abajo por tiempo. La mano sube y baja sin parar aunque en la subida no toques: ese movimiento constante es la base de todo lo demás." },
@@ -35,47 +36,52 @@ const R = { run: false, timer: null, next: 0, k: 0, t0: 0, bars: 0, hits: [], on
 export function mountRasgueo(container) {
   el = container;
   el.innerHTML = `
-  <div class="cols" style="--cols:minmax(0,1.35fr) minmax(0,1fr)">
+  <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
+  <div class="col">
+  <div class="panel deck-panel">
+   <div class="deck">
+    <div class="deck-top">
+      <select id="rgPick" aria-label="Elegir patrón"></select>
+      <span class="deck-tempo"><span id="rgBpm"></span><small>BPM</small></span>
+      <button class="btn small" data-rd="-5" aria-label="Bajar 5 BPM">−5</button><button class="btn small" data-rd="5" aria-label="Subir 5 BPM">+5</button>
+    </div>
+    <div class="sgrid" id="rgGrid"></div>
+    <div id="rgHwy"></div>
+    <div class="stage dstage" id="rgStage" aria-live="polite">
+      <div class="meta">
+        <span class="lab" id="rgLab">Listo</span>
+        <div class="now"><span class="chordnow" id="rgChord"></span><span class="stage-chord" id="rgDiag"></span></div>
+        <span class="sub" id="rgSub"></span>
+      </div>
+      <div class="nextbox" id="rgNextBox" hidden><span class="lab">Sigue</span><span class="nxt" id="rgNext"></span></div>
+    </div>
+    <div class="panel hl" id="rgResult" hidden></div>
+    <div class="deck-ctl">
+      <select id="rgChords" aria-label="Acordes" style="max-width:190px"></select>
+      <select id="rgLen" aria-label="Duración"><option value="8">8 compases</option><option value="16">16 compases</option><option value="0">Sin fin</option></select>
+      <label class="chip-toggle"><input type="checkbox" id="rgGuide" checked> Sonido guía</label>
+      <label class="chip-toggle" id="rgRampRow"><input type="checkbox" id="rgRamp"> +2 BPM cada 4 compases</label>
+      <label class="chip-toggle"><input type="checkbox" id="rgMic"> Calificar con micrófono</label>
+      <button class="btn primary" id="rgStart" data-primary>Empezar</button>
+    </div>
+   </div>
+  </div>
+  </div>
   <div class="col">
   <div class="panel">
-    <div class="row between" style="align-items:flex-start">
-      <div style="min-width:0"><div class="label" id="rgLevel"></div><h2 id="rgName"></h2></div>
-      <span class="chip acc" id="rgBest"></span>
-    </div>
-    <select id="rgPick" aria-label="Elegir patrón"></select>
+    <div class="row between" style="align-items:flex-start"><div style="min-width:0"><div class="label" id="rgLevel"></div><h2 id="rgName"></h2></div><span class="chip acc" id="rgBest"></span></div>
     <p class="note" id="rgDesc"></p>
-    <div class="sgrid" id="rgGrid"></div>
-    <div class="stage" id="rgStage" aria-live="polite">
-      <span class="lab" id="rgLab">Listo</span>
-      <span class="chordnow" id="rgChord"></span>
-      <span class="sub" id="rgSub"></span>
-    </div>
-    <div class="grid2">
-      <label for="rgChords">Acordes<select id="rgChords"></select></label>
-      <label for="rgLen">Duración<select id="rgLen"><option value="8">8 compases</option><option value="16">16 compases</option><option value="0">Sin fin</option></select></label>
-    </div>
-    <div class="row between" style="align-items:flex-end">
-      <div><div class="label">Tempo</div><div class="big" style="font-size:2.6rem"><span id="rgBpm"></span><span style="font-size:1rem;color:var(--muted)"> BPM</span></div></div>
-      <div class="row"><button class="btn" data-rd="-5">−5</button><button class="btn" data-rd="5">+5</button></div>
-    </div>
-    <div class="stack" style="gap:8px">
-      <label class="switch"><input type="checkbox" id="rgGuide" checked> Sonido guía: escucha el patrón tocado</label>
-      <label class="switch" id="rgRampRow"><input type="checkbox" id="rgRamp"> Subir 2 BPM cada 4 compases</label>
-      <label class="switch"><input type="checkbox" id="rgMic"> Calificar mi tiempo con el micrófono</label>
-    </div>
-    <button class="btn primary block" id="rgStart" data-primary>Empezar</button>
-    <div class="panel hl" id="rgResult" hidden></div>
   </div>
   <div class="panel" id="rgHist"></div>
-  </div>
-  <div class="col">
   <div class="panel">
     <div class="label">Patrones</div>
-    <div class="stack" id="rgList" style="gap:6px"></div>
+    <div class="pgrid" id="rgList"></div>
   </div>
   <div class="panel" id="rgEditor"></div>
   </div>
   </div>`;
+  hw = new Highway($("#rgHwy", el), { mode: "hits" });
+  fb = new Feedback($("#rgStage", el));
   $("#rgPick", el).onchange = e => { if (R.run) return; data.ajustes.rasgueoId = e.target.value; save(); render(); };
   $("#rgChords", el).onchange = e => { data.ajustes.rasgueoAcordes = e.target.value; save(); idle(); };
   $("#rgLen", el).onchange = e => { data.ajustes.rasgueoLen = e.target.value; save(); $("#rgRampRow", el).hidden = e.target.value !== "0"; };
@@ -103,12 +109,13 @@ function render() {
   sel.value = cur; if (!sel.value) sel.value = "c:Em";
   $("#rgLen", el).value = data.ajustes.rasgueoLen || "8"; $("#rgRampRow", el).hidden = $("#rgLen", el).value !== "0";
   $("#rgGuide", el).checked = data.ajustes.rasgueoGuia !== false;
-  $("#rgMic", el).checked = !!data.ajustes.rasgueoMic;
+  $("#rgMic", el).checked = data.ajustes.rasgueoMic !== false;
   grid(-1); idle(); renderList(); renderHist(); renderEditor();
 }
 function setBpm(v, persist) {
   R.bpm = clampB(v); $("#rgBpm", el).textContent = R.bpm;
   if (persist && !R.run) { const p = curP(), s = store(); s.prog[p.id] = { ...prog(p.id), bpm: R.bpm }; save(); }
+  if (!R.run && hw && persist) idle();
 }
 function grid(active, marks) {
   const p = curP(), cnt = COUNT[p.spb];
@@ -129,11 +136,21 @@ function chordPlan() {
   const find = b => { let p = ((b % total) + total) % total; for (let i = 0; i < q.acordes.length; i++) { if (p < q.acordes[i].t) return i; p -= q.acordes[i].t; } return 0; };
   return { name: q.nombre, at: b => q.acordes[find(b)].c, next: b => q.acordes[(find(b) + 1) % q.acordes.length].c };
 }
+function showChord(c, nx) {
+  if ($("#rgChord", el).textContent !== c) { $("#rgChord", el).textContent = c; $("#rgDiag", el).innerHTML = CHORDS[c] ? diagram(c) : ""; }
+  $("#rgNextBox", el).hidden = !nx; $("#rgNext", el).textContent = nx || "";
+}
 function idle() {
   const plan = chordPlan(), c = plan.at(0);
   $("#rgStage", el).classList.remove("live"); $("#rgLab", el).textContent = "Listo";
-  $("#rgChord", el).textContent = c;
+  showChord(c, plan.next(0) !== c ? plan.next(0) : null);
   $("#rgSub", el).textContent = `Un compás de entrada y luego el patrón. ${$("#rgGuide", el).checked ? "El sonido guía toca contigo." : "Solo clic."}`;
+  if (!R.run && hw) {
+    fb.reset();
+    const p = curP(), dt = 60 / R.bpm / p.spb, list = [];
+    for (let k = 0, t = 1; t < 12; k++, t += dt) { const c = p.p[k % p.p.length]; if (c !== "-") list.push({ id: "p" + k, t, sym: SYMBOL[c], acc: "DU".includes(c) }); }
+    hw.preview(list);
+  }
 }
 
 /* ---------- Lista y editor ---------- */
@@ -212,22 +229,29 @@ async function toggle() {
   R.listen = $("#rgMic", el).checked;
   if (R.listen) {
     if (!A.mic.an) { $("#rgLab", el).textContent = "Silencia las cuerdas"; $("#rgSub", el).textContent = "Midiendo el ruido del cuarto…"; }
-    if (!(await A.micOn())) { toast(A.mic.error || "No se pudo usar el micrófono"); idle(); return; }
+    if (!(await A.micOn())) {
+      if (!micWarned) { toast("Sin micrófono: la ronda sigue sin calificación automática"); micWarned = true; }
+      R.listen = false;
+    }
   }
-  window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-seq"));
+  window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-cambios")); window.dispatchEvent(new Event("riff:stop-seq"));
   const p = curP(); R.pat = p; R.plan = chordPlan();
   R.len = +($("#rgLen", el).value || 8); R.ramp = R.len === 0 && $("#rgRamp", el).checked; R.guide = $("#rgGuide", el).checked;
   R.slotsPerBar = p.p.length; R.beatsPerBar = p.p.length / p.spb;
   const beat = 60 / R.bpm;
   R.k = -R.beatsPerBar * p.spb;   // compás de entrada, en casillas
   R.next = a.currentTime + .12; R.t0 = R.next + R.beatsPerBar * beat;
-  R.hits = []; R.onsets = []; R.sched = []; R.bars = 0; R.lastUi = -1; R.startBpm = R.bpm;
-  if (R.listen) A.startOnsets(t => R.onsets.push(t));
+  R.hits = []; R.onsets = []; R.sched = []; R.bars = 0; R.lat = .06; R.latAt = 0; R.jIdx = 0; R.used = new Set(); R.barStat = {};
+  R.hitsPerBar = [...p.p].filter(c => c !== "-").length;
+  hw.reset(); fb.reset(); hw.tickOffset = R.lat;
+  hw.addMany(projectHits(0, R.t0, R.bpm, R.len ? Infinity : R.t0 + 14));
+  hw.run(() => A.now()); R.lastUi = -1; R.startBpm = R.bpm;
+  if (R.listen) A.startOnsets(t => { R.onsets.push(t); hw.tick(t, "hit"); });
   R.run = true; $("#rgStage", el).classList.add("live"); $("#rgStart", el).textContent = "Detener"; $("#rgResult", el).hidden = true;
   R.timer = setInterval(tick, 25); A.keepAwake(true); tick();
 }
 function stop(cancel) {
-  R.run = false; clearInterval(R.timer); A.keepAwake(false); if (R.listen) setTimeout(A.stopOnsets, 300);
+  R.run = false; clearInterval(R.timer); hw.stop(); A.keepAwake(false); if (R.listen) setTimeout(A.stopOnsets, 300);
   $("#rgStart", el).textContent = "Empezar"; $("#rgStage", el).classList.remove("live");
   if (cancel) {
     grid(-1); idle();
@@ -248,35 +272,70 @@ function tick() {
       const c = p.p[i];
       R.sched.push({ t: R.next, i, beatIdx, bar });
       if (R.guide) playHit(c, CHORDS[R.plan.at(beatIdx)]?.f || CHORDS.Em.f, R.next, slotDur);
-      if (c !== "-") R.hits.push({ t: R.next, i, c });
+      if (c !== "-") R.hits.push({ t: R.next, i, c, k: R.k });
       if (i === 0 && bar > 0) {
         R.bars = bar;
         if (R.ramp && bar % 4 === 0) setBpm(R.bpm + 2, false);
+        if (!R.len) hw.replaceFuture(projectHits(R.k, R.next, R.bpm, R.next + 14), R.next);
       }
     }
     R.next += 60 / R.bpm / spb; R.k++;
   }
+  liveJudge(now);
   // Interfaz
   if (now < R.t0) {
     const n = Math.floor((now - (R.t0 - R.beatsPerBar * 60 / R.bpm)) / (60 / R.bpm)) + 1;
-    $("#rgLab", el).textContent = "Entrada"; $("#rgChord", el).textContent = Math.max(1, Math.min(R.beatsPerBar, n));
-    $("#rgSub", el).textContent = "Empieza con " + R.plan.at(0); return;
+    $("#rgLab", el).textContent = "Entrada"; showChord(R.plan.at(0), null);
+    $("#rgSub", el).textContent = `Empieza en ${R.beatsPerBar - Math.max(1, Math.min(R.beatsPerBar, n)) + 1}…`; return;
   }
   // La casilla que suena ahora es la última programada cuyo tiempo ya pasó (funciona aunque el tempo suba)
   let cur = null; while (R.sched.length && R.sched[0].t <= now) cur = R.sched.shift();
   if (cur && cur.i !== R.lastUi) {
     R.lastUi = cur.i; grid(cur.i);
     const c = R.plan.at(cur.beatIdx), nx = R.plan.next(cur.beatIdx);
-    $("#rgChord", el).textContent = c;
+    showChord(c, nx !== c ? nx : null);
     $("#rgLab", el).textContent = R.len ? `Compás ${Math.min(cur.bar + 1, R.len)} de ${R.len}` : `Compás ${cur.bar + 1}`;
-    $("#rgSub", el).textContent = (nx !== c ? `Sigue: ${nx} · ` : "") + `${R.bpm} BPM`;
+    $("#rgSub", el).textContent = `${R.bpm} BPM`;
     $("#rgBpm", el).textContent = R.bpm;
+  }
+}
+// Fichas del carril para los golpes que vienen
+function projectHits(fromK, fromT, bpm, until) {
+  const p = R.pat, out = [], dt = 60 / bpm / p.spb; let k = fromK, t = fromT;
+  while (t < until) {
+    if (k >= 0) {
+      const i = k % R.slotsPerBar, bar = Math.floor(k / R.slotsPerBar); if (R.len && bar >= R.len) break;
+      const c = p.p[i]; if (c !== "-") out.push({ id: "h" + k, t, sym: SYMBOL[c], acc: "DU".includes(c) });
+    }
+    k++; t += dt;
+  }
+  return out;
+}
+// Calificación al momento: cada golpe se busca entre lo detectado en cuanto termina su ventana.
+// El retraso del micrófono se estima con los golpes que ya pasaron y se actualiza cada medio segundo.
+function liveJudge(now) {
+  if (!R.listen) return;
+  const slotDur = 60 / R.bpm / R.pat.spb, win = Math.min(slotDur * .4, .07);
+  if (now - R.latAt > .5) {
+    const past = R.hits.filter(h => h.t < now - .25);
+    if (past.length >= 8) { R.lat = analyze(past, R.onsets, slotDur).latency; hw.tickOffset = R.lat; }
+    R.latAt = now;
+  }
+  while (R.jIdx < R.hits.length && R.hits[R.jIdx].t + R.lat + win < now - .03) {
+    const h = R.hits[R.jIdx++], t = h.t + R.lat; let bi = -1, bd = win;
+    R.onsets.forEach((o, k) => { if (R.used.has(k)) return; const d = Math.abs(o - t); if (d < bd) { bd = d; bi = k; } });
+    let st = "miss";
+    if (bi >= 0) { R.used.add(bi); const err = (R.onsets[bi] - t) * 1000; st = Math.abs(err) <= 25 ? "ok" : err < 0 ? "early" : "late"; }
+    hw.mark("h" + h.k, st);
+    const bar = Math.floor(h.k / R.slotsPerBar), b = R.barStat[bar] || (R.barStat[bar] = { n: 0, miss: 0, off: 0 });
+    b.n++; if (st === "miss") b.miss++; else if (st !== "ok") b.off++;
+    if (b.n === R.hitsPerBar) fb.show(b.miss ? "miss" : b.off > 1 ? "meh" : "ok");
   }
 }
 function finishAt(tEnd) {
   clearInterval(R.timer);
   const wait = Math.max(0, (tEnd - A.now()) * 1000) + 350;   // deja que el último golpe se escuche y se detecte
-  setTimeout(() => { stop(false); A.chime(); $("#rgLab", el).textContent = "Ronda terminada"; $("#rgSub", el).textContent = R.listen ? "Mira tu resultado abajo" : "¿Cómo te salió?"; grade(); }, wait);
+  setTimeout(() => { liveJudge(A.now() + 1); stop(false); A.chime(); $("#rgLab", el).textContent = "Ronda terminada"; $("#rgSub", el).textContent = R.listen ? "Mira tu resultado abajo" : "¿Cómo te salió?"; grade(); }, wait);
 }
 
 /* ---------- Calificación ---------- */

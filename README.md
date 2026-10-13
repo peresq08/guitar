@@ -24,7 +24,15 @@ En el celular abre esa dirección y usa **Agregar a pantalla de inicio**.
 
 ## En laptop
 
-En pantallas anchas el menú pasa a un costado y cada sección usa dos columnas. Atajos: **Espacio** inicia o pausa lo principal de la sección (rutina, reto, metrónomo, Jam, afinador) y **1–5** cambian de sección.
+En pantallas anchas el menú pasa a un costado y cada sección usa dos columnas. En Practicar, todo lo que se usa durante una ronda (acorde actual y siguiente, carril, tempo y botón) cabe en una pantalla, sin desplazarse. Atajos: **Espacio** inicia o pausa lo principal de la sección (rutina, reto, metrónomo, Jam, afinador) y **1–5** cambian de sección.
+
+## Carril y reacción en vivo
+
+Con el micrófono activado (viene así por defecto), Cambios, Secuencias y Rasgueo muestran un carril estilo Guitar Hero:
+
+- **A la derecha, lo que viene** (10 segundos de acordes o 2 de golpes) y **a la izquierda, lo que tocaste** (30 segundos o 4), pintado en verde (bien), rojo (otro acorde), naranja (casi, o golpe adelantado o atrasado) o gris (te lo brincaste).
+- Abajo, una franja con lo que escuchó el micrófono.
+- En cada cambio aparece un ícono de reacción y un contador de racha.
 
 ## Entrenador de cambios
 
