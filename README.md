@@ -9,8 +9,8 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel y el tiempo que tengas. |
 | **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, tabs y riffs nota por nota, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
-| **Acordes** | 43 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 64 canciones de rock, pop, metal, grunge, reggae y country (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
+| **Acordes** | 44 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
+| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 96 canciones ordenado por categoría (pop y rock de los 80, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 

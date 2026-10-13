@@ -1,7 +1,7 @@
 import { data, save, streak, bestStreak, dayKey, minutesOn, exportJSON, importJSON, toast, esc, applyLane, $ } from "../store.js";
 import { PATTERNS } from "./rasgueo.js";
 const PATS = Object.fromEntries(PATTERNS.map(p => [p.id, p.nombre]));
-import { LEVELS, goalDone, toggleGoal, currentLevel, levelProgress } from "../plan.js";
+import { LEVELS, goalDone, toggleGoal, currentLevel, levelProgress, CATS, DIFF, difficulty } from "../plan.js";
 
 let root;
 const ESTADOS = { pendiente: "Por aprender", practicando: "Practicando", dominada: "Dominada" };
@@ -53,6 +53,10 @@ function render() {
     <div class="label">Mi repertorio</div><div class="seg wrap" role="radiogroup" aria-label="Filtrar canciones" id="sFilt">
       ${["todas", "practicando", "pendiente", "dominada"].map(f => `<button role="radio" data-f="${f}" aria-checked="${filt === f}">${f === "todas" ? "Todas" : ESTADOS[f]}</button>`).join("")}
     </div>
+    <div class="repfilters">
+      <select id="sCat" aria-label="Categoría"><option value="todas">Todas las categorías</option>${Object.entries(CATS).filter(([k]) => (data.canciones || []).some(s => (s.cat || "otras") === k)).map(([k, v]) => `<option value="${k}" ${catF === k ? "selected" : ""}>${v} (${(data.canciones || []).filter(s => (s.cat || "otras") === k).length})</option>`).join("")}</select>
+      <div class="seg" role="radiogroup" aria-label="Dificultad" id="sDif">${["todas", "facil", "intermedia", "avanzada"].map(d => `<button role="radio" data-d="${d}" aria-checked="${difF === d}">${d === "todas" ? "Toda dificultad" : DIFF[d]}</button>`).join("")}</div>
+    </div>
     <div>${songsHTML()}</div>
     <details>
       <summary>Agregar canción</summary>
@@ -62,6 +66,7 @@ function render() {
           <label for="nsA">Artista<input type="text" id="nsA" maxlength="80"></label>
           <label for="nsB">Tempo meta (BPM)<input type="number" id="nsB" min="30" max="260"></label>
           <label for="nsN">Nivel<select id="nsN">${LEVELS.map(l => `<option value="${l.id}">${l.id} · ${l.name}</option>`).join("")}</select></label>
+          <label for="nsC">Categoría<select id="nsC">${Object.entries(CATS).map(([k, v]) => `<option value="${k}" ${k === "otras" ? "selected" : ""}>${v}</option>`).join("")}</select></label>
         </div>
         <button class="btn primary" id="nsAdd" style="align-self:flex-start">Agregar</button>
       </div>
@@ -97,20 +102,30 @@ function render() {
   bind();
 }
 
-let filt = "todas";
+let filt = "todas", catF = "todas", difF = "todas";
 function songsHTML() {
-  const list = (data.canciones || []).filter(s => filt === "todas" || s.estado === filt);
-  if (!list.length) return `<div class="empty">No hay canciones en esta lista.</div>`;
+  const list = (data.canciones || []).filter(s => (filt === "todas" || s.estado === filt) && (catF === "todas" || (s.cat || "otras") === catF) && (difF === "todas" || difficulty(s.nivel) === difF));
+  if (!list.length) return `<div class="empty">No hay canciones con estos filtros.</div>`;
   const order = { practicando: 0, pendiente: 1, dominada: 2 };
-  return list.slice().sort((a, b) => order[a.estado] - order[b.estado] || (a.nivel || 1) - (b.nivel || 1)).map(s => `
+  const sorted = list.slice().sort((a, b) => (a.nivel || 1) - (b.nivel || 1) || order[a.estado] - order[b.estado] || a.titulo.localeCompare(b.titulo));
+  // agrupa por categoría, en el orden de CATS
+  return Object.keys(CATS).map(k => {
+    const g = sorted.filter(s => (s.cat || "otras") === k); if (!g.length) return "";
+    return `<details class="repcat" ${catF !== "todas" || filt !== "todas" || difF !== "todas" || k === openCat ? "open" : ""} data-cat="${k}"><summary><span>${CATS[k]}</span><span class="note">${g.length}</span></summary>${g.map(songRow).join("")}</details>`;
+  }).join("");
+}
+let openCat = "rock80";
+function songRow(s) {
+  const d = difficulty(s.nivel);
+  return `
     <div class="songrow">
-      <div style="min-width:0"><div class="t">${esc(s.titulo)}</div><div class="a">${esc(s.artista)}${s.anio ? ` · ${s.anio}` : ""} · nivel ${s.nivel || 1}${s.bpmMeta ? ` · ≈ ${s.bpmMeta} BPM` : ""}</div>
+      <div style="min-width:0"><div class="t">${esc(s.titulo)} <span class="dchip ${d}">${DIFF[d]}</span></div><div class="a">${esc(s.artista)}${s.anio ? ` · ${s.anio}` : ""} · nivel ${s.nivel || 1}${s.bpmMeta ? ` · ≈ ${s.bpmMeta} BPM` : ""}</div>${s.tip ? `<div class="a tipline">${esc(s.tip)}</div>` : ""}
         <span class="row" style="gap:12px"><a class="note" href="https://www.songsterr.com/?pattern=${encodeURIComponent(s.titulo + " " + s.artista)}" target="_blank" rel="noopener">Tablatura</a>${(data.secuencias || []).find(q => q.cancion === s.id && q.acordes.length > 1) ? `<a class="note" href="#" data-seq="${(data.secuencias || []).find(q => q.cancion === s.id).id}">Practicar acordes</a>` : ""}${s.rasgueo && PATS[s.rasgueo] ? `<a class="note" href="#" data-strum="${s.rasgueo}">Rasgueo: ${esc(PATS[s.rasgueo])}</a>` : ""}</span></div>
       <div class="row" style="flex-wrap:nowrap">
         <select data-song="${s.id}" aria-label="Estado de ${esc(s.titulo)}" style="min-height:38px;padding:6px">${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${s.estado === k ? "selected" : ""}>${v}</option>`).join("")}</select>
         <button class="icon-btn" data-del="${s.id}" aria-label="Quitar ${esc(s.titulo)}" style="width:38px;height:38px;font-size:1rem">✕</button>
       </div>
-    </div>`).join("");
+    </div>`;
 }
 function recordsHTML() {
   const best = {};
@@ -140,6 +155,9 @@ function dailyChart() {
 function bind() {
   root.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => toggleGoal(b.dataset.goal));
   root.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filt = b.dataset.f; render(); setTimeout(() => $("#repertorio", root).scrollIntoView({ block: "start" }), 0); });
+  root.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { difF = b.dataset.d; render(); setTimeout(() => $("#repertorio", root).scrollIntoView({ block: "start" }), 0); });
+  $("#sCat", root).onchange = e => { catF = e.target.value; render(); setTimeout(() => $("#repertorio", root).scrollIntoView({ block: "start" }), 0); };
+  root.querySelectorAll(".repcat").forEach(d => d.addEventListener("toggle", () => { if (d.open) openCat = d.dataset.cat; }));
   root.querySelectorAll("[data-strum]").forEach(a => a.onclick = e => { e.preventDefault(); window.dispatchEvent(new CustomEvent("riff:go", { detail: { view: "practicar", opts: { tab: "rasgueo", pattern: a.dataset.strum } } })); });
   root.querySelectorAll("[data-seq]").forEach(a => a.onclick = e => { e.preventDefault(); window.dispatchEvent(new CustomEvent("riff:go", { detail: { view: "practicar", opts: { tab: "secuencia", seq: a.dataset.seq } } })); });
   root.querySelectorAll("[data-song]").forEach(s => s.onchange = () => {
@@ -155,7 +173,7 @@ function bind() {
   });
   $("#nsAdd", root).onclick = () => {
     const t = $("#nsT", root).value.trim(); if (!t) { toast("Escribe el título de la canción"); return; }
-    data.canciones.push({ id: "u" + Date.now(), titulo: t, artista: $("#nsA", root).value.trim(), bpmMeta: +$("#nsB", root).value || null, nivel: +$("#nsN", root).value, estado: "practicando", notas: "" });
+    data.canciones.push({ id: "u" + Date.now(), titulo: t, artista: $("#nsA", root).value.trim(), bpmMeta: +$("#nsB", root).value || null, nivel: +$("#nsN", root).value, cat: $("#nsC", root).value, estado: "practicando", notas: "" });
     save(); toast("Canción agregada a Practicando");
   };
   let calArmed = false;

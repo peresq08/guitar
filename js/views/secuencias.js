@@ -7,7 +7,7 @@ import { classify, chordTemplate } from "../detect.js";
 import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
 import { openMicSettings, warnGuideEcho } from "../ui/calib.js";
 import { allPatterns, patternById, playHit, STRUM_SYMBOL } from "./rasgueo.js";
-import { LIBRARY } from "../plan.js";
+import { LIBRARY, CATS, DIFF, difficulty } from "../plan.js";
 
 let el;
 const BEATS = [1, 2, 3, 4, 6, 8];
@@ -157,8 +157,14 @@ function render() {
   const q = cur(); if (!q) return;
   // Agrupa: primero tus secuencias y ejemplos, luego las de canciones
   const mine = list().filter(x => !x.cancion), songs = list().filter(x => x.cancion);
-  const opt = x => `<option value="${x.id}" ${x.id === q.id ? "selected" : ""}>${esc(x.nombre)}</option>`;
-  $("#sqPick", el).innerHTML = `${mine.length ? `<optgroup label="Progresiones">${mine.map(opt).join("")}</optgroup>` : ""}${songs.length ? `<optgroup label="Canciones">${songs.map(opt).join("")}</optgroup>` : ""}`;
+  const opt = (x, d) => `<option value="${x.id}" ${x.id === q.id ? "selected" : ""}>${esc(x.nombre)}${d ? " · " + DIFF[d].toLowerCase() : ""}</option>`;
+  // Canciones agrupadas por categoría y ordenadas de fácil a difícil
+  const songOf = x => (data.canciones || []).find(s => s.id === x.cancion) || {};
+  const groups = Object.keys(CATS).map(k => {
+    const g = songs.filter(x => (songOf(x).cat || "otras") === k).sort((a, b) => (songOf(a).nivel || 1) - (songOf(b).nivel || 1) || a.nombre.localeCompare(b.nombre));
+    return g.length ? `<optgroup label="${CATS[k]}">${g.map(x => opt(x, difficulty(songOf(x).nivel))).join("")}</optgroup>` : "";
+  }).join("");
+  $("#sqPick", el).innerHTML = `${mine.length ? `<optgroup label="Progresiones">${mine.map(x => opt(x)).join("")}</optgroup>` : ""}${groups}`;
   $("#sqTitle", el).textContent = q.nombre;
   // Rasgueo: el elegido para la secuencia o, si no hay, el sugerido de la canción ligada
   // Si no lo elegiste a mano, sigue al rasgueo sugerido de la canción (así se actualiza cuando la biblioteca agrega uno)

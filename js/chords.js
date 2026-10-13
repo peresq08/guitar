@@ -43,6 +43,7 @@ export const CHORDS = {
   "Fm":  { f: "133111", d: "134111", g: "Cejilla" },
   "Bm":  { f: "x24432", d: "-13421", g: "Cejilla" },
   "B":   { f: "x24442", d: "-13331", g: "Cejilla" },
+  "Bb":  { f: "x13331", d: "-13331", g: "Cejilla" },
   "Gm":  { f: "355333", d: "134111", g: "Cejilla" },
   "Cm":  { f: "x35543", d: "-13421", g: "Cejilla" },
   "F#m": { f: "244222", d: "134111", g: "Cejilla" },

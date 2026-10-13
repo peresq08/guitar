@@ -740,3 +740,20 @@ select optgroup{font-weight:700;color:var(--muted)}
 .focus .focus-exit:not([hidden]){display:inline-flex}
 .focus .deck-top{padding-right:96px}
 @media (min-width:1000px) and (max-width:1599px){ .vt span{display:none} .vt{padding:0 9px} }
+
+/* Repertorio por categoría y dificultad */
+.repfilters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 4px}
+.repfilters select{min-height:38px;padding:6px 10px;flex:1 1 200px}
+.repfilters .seg{flex:0 1 auto}
+.repfilters .seg button{padding:6px 10px;font-size:.84rem}
+.repcat{border-top:1px solid var(--line)}
+.repcat > summary{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;cursor:pointer;font-family:var(--display);font-weight:800;font-size:1.15rem;list-style:none}
+.repcat > summary::-webkit-details-marker{display:none}
+.repcat > summary::after{content:"▾";color:var(--muted);margin-left:8px;transition:transform .15s}
+.repcat:not([open]) > summary::after{transform:rotate(-90deg)}
+.repcat > summary .note{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:.8rem}
+.dchip{display:inline-block;vertical-align:middle;margin-left:6px;padding:1px 7px;border-radius:99px;font:700 .68rem var(--body);letter-spacing:.02em;border:1px solid currentColor}
+.dchip.facil{color:var(--good)}
+.dchip.intermedia{color:var(--warn)}
+.dchip.avanzada{color:var(--led)}
+.songrow .tipline{margin-top:2px;font-size:.82rem;opacity:.85}

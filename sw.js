@@ -1,5 +1,5 @@
 // Funciona sin conexión: guarda la app y las fuentes en caché.
-const VERSION = "riff-v2.10.1";
+const VERSION = "riff-v2.11.0";
 const FILES = [
   "./", "index.html", "css/app.css", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png",
   "js/main.js", "js/detect.js", "js/store.js", "js/audio.js", "js/chords.js", "js/plan.js",

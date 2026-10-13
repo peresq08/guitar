@@ -148,7 +148,60 @@ export const LIBRARY = [
   { titulo: "Wagon Wheel", artista: "Old Crow Medicine Show", anio: 2004, nivel: 1, bpm: 76, rasgueo: "country", tip: "G, D, Em y C: la de fogata del country moderno.", secuencias: [{ nombre: "toda la canción", acordes: "G D Em C G D C C" }] },
   { titulo: "Tennessee Whiskey", artista: "Chris Stapleton", anio: 2015, nivel: 5, bpm: 48, rasgueo: "balada", tip: "Solo A y Bm, muy lento y con sentimiento: buena para afianzar Bm.", secuencias: [{ nombre: "toda la canción", acordes: "A:6 Bm:6" }] },
   { titulo: "Uptown Funk", artista: "Mark Ronson ft. Bruno Mars", anio: 2014, nivel: 2, bpm: 115, rasgueo: "funk2", tip: "Dos acordes con golpes cortos y apagados.", secuencias: [{ nombre: "riff (simplificado)", acordes: "Dm7 G7" }] },
+  // Tercera tanda: country y americana, pop y rock de los 80 (guitarras con chorus) y rock en español.
+  // Progresiones revisadas contra hojas de acordes públicas; las marcadas "simplificada" cambian algún acorde por uno más fácil.
+  { titulo: "Jersey Giant", artista: "Tyler Childers", anio: 2017, nivel: 1, bpm: 80, rasgueo: "country", cat: "country", tip: "G, D, Am y C toda la canción; el puente pasa por A.", secuencias: [{ nombre: "estrofa", acordes: "G D Am C" }, { nombre: "puente", acordes: "A C A D" }] },
+  { titulo: "Shake the Frost", artista: "Tyler Childers", anio: 2017, nivel: 2, bpm: 82, rasgueo: "balada", cat: "country", tip: "Capo en el traste 2, con formas de Am, C, G y F (mini). La original usa bajos que caminan entre acordes.", secuencias: [{ nombre: "estrofa", acordes: "Am:4 C:4 G:4 F (mini):2 C:2" }, { nombre: "coro", acordes: "F (mini) G C G Am C G C" }] },
+  { titulo: "Feathered Indians", artista: "Tyler Childers", anio: 2017, nivel: 2, bpm: 120, rasgueo: "country", cat: "country", tip: "D, A y G en la estrofa; el coro mete Bm (usa la versión parcial si aún no tienes la cejilla).", secuencias: [{ nombre: "estrofa", acordes: "D A G G" }, { nombre: "coro", acordes: "G Bm A G" }] },
+  { titulo: "Broken Window Serenade", artista: "Whiskey Myers", anio: 2011, nivel: 1, bpm: 70, rasgueo: "balada", cat: "country", tip: "Solo Cadd9 y Em: los dedos 3 y 4 se quedan fijos en la 1ª y 2ª cuerda.", secuencias: [{ nombre: "toda la canción", acordes: "Cadd9:4 Em:4" }] },
+  { titulo: "Stone", artista: "Whiskey Myers", anio: 2016, nivel: 2, bpm: 72, rasgueo: "balada", cat: "country", tip: "Am, F y C en la estrofa; el coro suma G. Usa F (mini).", secuencias: [{ nombre: "estrofa", acordes: "Am F (mini) C C" }, { nombre: "coro", acordes: "F (mini) C G Am" }] },
+  { titulo: "Something in the Orange", artista: "Zach Bryan", anio: 2022, nivel: 1, bpm: 64, rasgueo: "balada", cat: "country", tip: "Em, G, D y Cadd9. En la grabación el D es D/F#: bajo en la 6ª cuerda, traste 2.", secuencias: [{ nombre: "estrofa", acordes: "Em G D Em" }, { nombre: "coro", acordes: "Cadd9 G D Em" }] },
+  { titulo: "Cover Me Up", artista: "Jason Isbell", anio: 2013, nivel: 5, bpm: 70, rasgueo: "balada", cat: "country", tip: "E y A con C#m y F#m (cejilla) en las frases que suben.", secuencias: [{ nombre: "estrofa", acordes: "E A E E C#m A E E" }, { nombre: "coro", acordes: "E A E E F#m A C#m E" }] },
+  { titulo: "Boot Scootin' Boogie", artista: "Brooks & Dunn", anio: 1992, nivel: 2, bpm: 140, rasgueo: "shuffle", cat: "country", tip: "Shuffle de honky-tonk en E con A y B; el G es un paso rápido de regreso a E.", secuencias: [{ nombre: "estrofa (aprox.)", acordes: "E:8 A:4 E:4 B:2 A:2 G:2 E:2" }] },
+  { titulo: "Neon Moon", artista: "Brooks & Dunn", anio: 1992, nivel: 2, bpm: 100, rasgueo: "country", cat: "country", tip: "A, D y E7: balada de honky-tonk para soltar el rasgueo.", secuencias: [{ nombre: "estrofa", acordes: "A D A D A E7 A A" }, { nombre: "coro", acordes: "D E D E D E A A" }] },
+  { titulo: "Friends in Low Places", artista: "Garth Brooks", anio: 1990, nivel: 5, bpm: 80, rasgueo: "country", cat: "country", tip: "Versión simplificada del coro, sin el acorde disminuido: A, Bm y E.", secuencias: [{ nombre: "coro (simplificado)", acordes: "A:8 Bm:4 E:4 A:4 A7:4 Bm:4 E:4" }] },
+  { titulo: "Chattahoochee", artista: "Alan Jackson", anio: 1993, nivel: 2, bpm: 112, rasgueo: "boomchicka", cat: "country", tip: "C y G con bajo y rasgueo; el pre-coro pasa por F (mini) y D.", secuencias: [{ nombre: "pre-coro", acordes: "F (mini) C G C F (mini) D G G" }, { nombre: "coro", acordes: "C G C G C:8" }] },
+  { titulo: "Amarillo by Morning", artista: "George Strait", anio: 1982, nivel: 5, bpm: 90, cat: "country", tip: "Vals en 3/4: cuenta 1-2-3 por acorde. Lleva F#m con cejilla.", secuencias: [{ nombre: "estrofa", acordes: "D:3 F#m:3 G:3 D:3 F#m:3 G:3 A7:6" }] },
+  { titulo: "Sex on Fire", artista: "Kings of Leon", anio: 2008, nivel: 5, bpm: 153, rasgueo: "rock8", cat: "alt", tip: "E y C#m (cejilla) en corcheas; el coro agrega A.", secuencias: [{ nombre: "estrofa", acordes: "E:8 C#m:8" }, { nombre: "coro", acordes: "E C#m A A" }] },
+  { titulo: "Use Somebody", artista: "Kings of Leon", anio: 2008, nivel: 3, bpm: 137, rasgueo: "rock8", cat: "alt", tip: "Power chords C5, E5, F5 y A5 en corcheas parejas.", secuencias: [{ nombre: "toda la canción", acordes: "C5 E5 F5 A5" }] },
+  { titulo: "Time After Time", artista: "Cyndi Lauper", anio: 1984, nivel: 2, bpm: 130, rasgueo: "balada", cat: "rock80", tip: "Usa F (mini). En la grabación la guitarra arpegia con chorus; tócala suave.", secuencias: [{ nombre: "intro", acordes: "F (mini) G Em F (mini)" }, { nombre: "coro", acordes: "G Am F (mini) G C:8" }] },
+  { titulo: "Just Like Heaven", artista: "The Cure", anio: 1987, nivel: 5, bpm: 150, rasgueo: "pop", cat: "rock80", tip: "A, E, Bm y D; el riff con chorus va encima de estos acordes.", secuencias: [{ nombre: "estrofa", acordes: "A E Bm D" }, { nombre: "coro", acordes: "F#m G F#m G D E" }] },
+  { titulo: "Boys Don't Cry", artista: "The Cure", anio: 1979, nivel: 5, bpm: 160, rasgueo: "rock8", cat: "rock80", tip: "A, Bm, C#m y D subiendo por el mástil, y de regreso.", secuencias: [{ nombre: "estrofa", acordes: "A Bm C#m D" }, { nombre: "coro", acordes: "D C#m Bm A" }] },
+  { titulo: "Friday I'm in Love", artista: "The Cure", anio: 1992, nivel: 5, bpm: 136, rasgueo: "pop", cat: "rock80", tip: "La grabación está medio tono abajo; en afinación estándar suena medio tono más agudo.", secuencias: [{ nombre: "estrofa", acordes: "D G D A Bm G D A" }, { nombre: "coro", acordes: "G A Bm G D A" }] },
+  { titulo: "Down Under", artista: "Men at Work", anio: 1981, nivel: 5, bpm: 108, rasgueo: "ska", cat: "rock80", tip: "Bm, A y G con el golpe a contratiempo.", secuencias: [{ nombre: "estrofa", acordes: "Bm A Bm G A" }, { nombre: "coro", acordes: "D A Bm G A" }] },
+  { titulo: "Don't Dream It's Over", artista: "Crowded House", anio: 1986, nivel: 5, bpm: 82, rasgueo: "balada", cat: "rock80", tip: "Capo en el traste 1. Simplificada: D en lugar de D9.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "D Bm G F#" }, { nombre: "coro", acordes: "G A D Bm" }] },
+  { titulo: "There Is a Light That Never Goes Out", artista: "The Smiths", anio: 1986, nivel: 2, bpm: 135, rasgueo: "pop", cat: "rock80", tip: "Am, F, C y G con F (mini). El original lleva Am/G (bajo en G).", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "Am F (mini) C G" }, { nombre: "coro", acordes: "C Am F (mini) G" }] },
+  { titulo: "Never Tear Us Apart", artista: "INXS", anio: 1987, nivel: 2, bpm: 98, rasgueo: "balada", cat: "rock80", tip: "Lenta, en 6/8: Am, F (mini), Dm y Em.", secuencias: [{ nombre: "estrofa", acordes: "Am F (mini) Dm F (mini)" }, { nombre: "coro", acordes: "C F (mini) C F (mini) G" }] },
+  { titulo: "Don't You (Forget About Me)", artista: "Simple Minds", anio: 1985, nivel: 2, bpm: 112, rasgueo: "rock8", cat: "rock80", tip: "E, D y A toda la canción.", secuencias: [{ nombre: "toda la canción", acordes: "E D A D" }] },
+  { titulo: "Sunday Bloody Sunday", artista: "U2", anio: 1983, nivel: 5, bpm: 102, rasgueo: "rock8", cat: "rock80", tip: "Bm, D y G (en la grabación, G6). The Edge arpegia con eco.", secuencias: [{ nombre: "estrofa", acordes: "Bm D G G" }] },
+  { titulo: "Lucha de gigantes", artista: "Nacha Pop", anio: 1987, nivel: 5, bpm: 125, rasgueo: "pop", cat: "espanol", tip: "G, A, D y Em; la parte central agrega Bm y F#m.", secuencias: [{ nombre: "estrofa", acordes: "G A D Em" }, { nombre: "parte central", acordes: "Bm F#m G F#m Em" }] },
+  { titulo: "De música ligera", artista: "Soda Stereo", anio: 1990, nivel: 5, bpm: 130, rasgueo: "rock8", cat: "espanol", tip: "Bm, G, D y A toda la canción: guitarra con chorus al estilo Cerati.", secuencias: [{ nombre: "toda la canción", acordes: "Bm G D A" }] },
+  { titulo: "Persiana americana", artista: "Soda Stereo", anio: 1986, nivel: 5, bpm: 120, rasgueo: "rock8", cat: "espanol", tip: "Estrofa con D, G, C y Bm.", secuencias: [{ nombre: "estrofa", acordes: "D G D G C Bm" }] },
+  { titulo: "Lamento boliviano", artista: "Enanitos Verdes", anio: 1994, nivel: 5, bpm: 95, rasgueo: "pop", cat: "espanol", tip: "Em, Bm, Am y B7.", secuencias: [{ nombre: "estrofa", acordes: "Em Bm Am Em" }, { nombre: "coro", acordes: "Em Bm Am Am Em B7" }] },
+  { titulo: "Devuélveme a mi chica", artista: "Hombres G", anio: 1985, nivel: 5, bpm: 150, rasgueo: "rock8", cat: "espanol", tip: "Estrofa en Am y Dm; el coro sube con Bb y F con cejilla.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "Am Dm Am Dm" }, { nombre: "coro", acordes: "Bb F Bb F Bb F G A" }] },
+  { titulo: "Tren al sur", artista: "Los Prisioneros", anio: 1990, nivel: 2, bpm: 125, rasgueo: "rock8", cat: "espanol", tip: "Am y F casi toda la canción; usa F (mini).", secuencias: [{ nombre: "estrofa", acordes: "Am F (mini)" }, { nombre: "segunda parte", acordes: "G C Am Em F (mini) G" }] },
+  { titulo: "Entre dos tierras", artista: "Héroes del Silencio", anio: 1990, nivel: 5, bpm: 120, rasgueo: "rock8", cat: "espanol", tip: "Bm, F#m, Em y G; el estribillo cambia a D.", secuencias: [{ nombre: "estrofa", acordes: "Bm F#m Em G" }, { nombre: "estribillo", acordes: "Bm D G Bm" }] },
+  { titulo: "La célula que explota", artista: "Caifanes", anio: 1990, nivel: 5, bpm: 90, rasgueo: "pop", cat: "espanol", tip: "F#m, G, A y Bm.", secuencias: [{ nombre: "estrofa", acordes: "F#m G F#m G A Bm A Bm" }] },
 ];
+// Categorías y dificultad para ordenar el repertorio
+export const CATS = {
+  rock80: "Pop y rock de los 80", espanol: "Rock en español", country: "Country y americana", metal: "Hard rock y metal",
+  clasico: "Rock clásico", alt: "Alternativo, grunge e indie", pop: "Pop y baladas", folk: "Folk y fogata", reggae: "Reggae y funk", otras: "Otras",
+};
+const CAT_OF = {
+  metal: ["Every Rose Has Its Thorn", "Here I Go Again", "Patience", "Breaking the Law", "Back in Black", "Livin' on a Prayer", "Seek & Destroy", "Sweet Child O' Mine", "Knockin' on Heaven's Door", "Paranoid", "Iron Man"],
+  rock80: ["Summer of '69", "Every Breath You Take", "Don't Stop Believin'", "With or Without You", "I Love Rock 'n' Roll", "Should I Stay or Should I Go", "Rockin' in the Free World"],
+  clasico: ["Hotel California", "Sweet Home Alabama", "Smoke on the Water", "You Really Got Me", "Wild Thing", "Louie Louie", "La Bamba", "Twist and Shout", "Let It Be", "Love Me Do", "Brown Eyed Girl", "Bad Moon Rising", "Have You Ever Seen the Rain", "Wonderful Tonight", "Imagine", "Stand by Me", "Wish You Were Here"],
+  alt: ["Zombie", "Creep", "Wonderwall", "Boulevard of Broken Dreams", "Good Riddance (Time of Your Life)", "Smells Like Teen Spirit", "Losing My Religion", "Californication", "More Than Words"],
+  pop: ["Perfect", "Someone Like You", "Despacito", "Hey There Delilah", "Riptide"],
+  folk: ["Blowin' in the Wind", "Leaving on a Jet Plane", "Heart of Gold", "Hallelujah"],
+  country: ["Folsom Prison Blues", "Ring of Fire", "Jambalaya (On the Bayou)", "Jolene", "Achy Breaky Heart", "Wagon Wheel", "Tennessee Whiskey", "Take Me Home, Country Roads"],
+  reggae: ["No Woman, No Cry", "Get Lucky", "Uptown Funk"],
+};
+LIBRARY.forEach(L => { if (!L.cat) L.cat = Object.keys(CAT_OF).find(k => CAT_OF[k].includes(L.titulo)) || "otras"; });
+// Dificultad a partir del nivel del camino: 1–2 fácil (acordes abiertos), 3–4 intermedia (power chords, arpegios), 5 avanzada (cejilla)
+export const difficulty = nivel => (nivel || 1) <= 2 ? "facil" : nivel <= 4 ? "intermedia" : "avanzada";
+export const DIFF = { facil: "Fácil", intermedia: "Intermedia", avanzada: "Avanzada" };
 export function ensureSongs() {
   let changed = false;
   if (!Array.isArray(data.canciones)) {
@@ -160,13 +213,15 @@ export function ensureSongs() {
   LIBRARY.forEach((L, i) => {
     let song = data.canciones.find(s => s.titulo === L.titulo);
     if (!song && !data.agregado.canciones.includes(L.titulo) && L.nivel) {
-      song = { id: "b" + i, titulo: L.titulo, artista: L.artista, nivel: L.nivel, bpmMeta: L.bpm, tip: L.tip, estado: "pendiente", notas: "" };
+      song = { id: "b" + i, titulo: L.titulo, artista: L.artista, nivel: L.nivel, bpmMeta: L.bpm, tip: L.tip, cat: L.cat, estado: "pendiente", notas: "" };
       data.canciones.push(song); changed = true;
     }
     if (!data.agregado.canciones.includes(L.titulo)) { data.agregado.canciones.push(L.titulo); changed = true; }
     if (song) {
       if (L.anio && !song.anio) { song.anio = L.anio; changed = true; }
       if (L.rasgueo && !song.rasgueo) { song.rasgueo = L.rasgueo; changed = true; }
+      if (L.cat && !song.cat) { song.cat = L.cat; changed = true; }
+      if (L.tip && !song.tip) { song.tip = L.tip; changed = true; }
     }
   });
   if (changed) save();
