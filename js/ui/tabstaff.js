@@ -72,6 +72,10 @@ export function paint(g, L, o) {
     }
   }
   if (o.playX != null) {
+    // franja que se desliza a velocidad constante (modo continuo)
+    const gr = g.createLinearGradient(0, Y(0) - 14, 0, yLow + 14), cw = 34 * Math.min(K0, 1.6);
+    gr.addColorStop(0, "rgba(242,163,58,.08)"); gr.addColorStop(.5, "rgba(242,163,58,.2)"); gr.addColorStop(1, "rgba(242,163,58,.08)");
+    g.fillStyle = gr; roundRect(g, o.playX - cw / 2, Y(0) - 13, cw, (S - 1) * rowH + 26, 9); g.fill();
     g.strokeStyle = "rgba(242,163,58,.9)"; g.lineWidth = 2; g.shadowColor = "rgba(242,163,58,.8)"; g.shadowBlur = 10;
     g.beginPath(); g.moveTo(o.playX, Y(0) - 16); g.lineTo(o.playX, yLow + 12); g.stroke(); g.shadowBlur = 0; g.lineWidth = 1;
   }
@@ -99,7 +103,8 @@ export function paint(g, L, o) {
   g.textBaseline = "middle";
   for (let k = 0; k < L.items.length; k++) {
     const it = L.items[k]; if (!vis(it.x)) continue;
-    const st = status.get(it.i), isCur = it.i === o.cur, nx = L.items[k + 1];
+    const st = status.get(it.i), nx = L.items[k + 1];
+    const isCur = o.playX != null ? Math.abs(it.x - o.playX) < 13 * Math.min(K0, 1.6) : it.i === o.cur;
     for (const n of it.e.n) {
       const [s, f, , fl] = n, y = Y(s), txt = labelOf(n), wdt = tw(it, n);
       g.fillStyle = isCur ? "#f2a33a" : "#121820";

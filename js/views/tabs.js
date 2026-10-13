@@ -78,6 +78,8 @@ function shapesOf(t) {
   return shapeCache.get(k);
 }
 const shapeAt = (t, i) => shapesOf(t).find(x => i >= x.i && i <= x.j);
+// Movimiento de la tab al escuchar y con tempo: "nota" (salta de nota en nota) o "continuo" (se desliza parejo)
+const smoothMove = () => data.ajustes.tabMov === "continuo";
 const modeOf = t => prog(t).modo === "tempo" ? "tempo" : "aprender";
 const median = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; };
 
@@ -550,12 +552,27 @@ function listen() {
       if (!data.ajustes.tabLoop) { stopListen(); return; }
       PL.t0 += PL.tl.end + .5; PL.j = 0; PL.bk = backingList(t, PL.tl, 0); PL.bi = 0;
     }
-    while (PL.q.length && PL.q[0].at <= now) { const v = PL.q.shift(); L.view = v.i; staff.setCursor(v.i); show(); }
+    while (PL.q.length && PL.q[0].at <= now) { const v = PL.q.shift(); L.view = v.i; if (!smoothMove()) staff.setCursor(v.i); show(); }
   };
   PL.iv = setInterval(step, 25); step();
+  cancelAnimationFrame(PL.raf);
+  const glide = () => {
+    if (!PL.run) return;
+    if (smoothMove()) {
+      const now = A.now(), T0 = PL.t0, tm = PL.tl.times, n = tm.length;
+      let j = 0; while (j + 1 < n && T0 + tm[j + 1] <= now) j++;
+      if (now >= T0 + tm[0] - .3) {
+        const a = T0 + tm[j], b = j + 1 < n ? T0 + tm[j + 1] : a + .5, frac = Math.max(0, Math.min(1, (now - a) / (b - a)));
+        staff.play(staff.xAt(PL.r.from + j, now < a ? 0 : frac), PL.r.from + j);
+      }
+    }
+    PL.raf = requestAnimationFrame(glide);
+  };
+  PL.raf = requestAnimationFrame(glide);
 }
 function stopListen() {
-  clearInterval(PL.iv); PL.run = false; PL.q = [];
+  clearInterval(PL.iv); cancelAnimationFrame(PL.raf); PL.run = false; PL.q = [];
+  if (staff.playX != null) { staff.endPlay(); staff.setCursor(L.view, true); }
   $("#tbListen", el).textContent = "Escuchar"; $("#tbStart", el).disabled = false;
   if (!L.run) $("#tbLab", el).textContent = "Listo";
 }
@@ -621,12 +638,22 @@ function openSettings() {
       <label class="field">Tu guitarra está
         <select id="tbTuneSel"><option value="tab">afinada como la tab (${esc(tl.short)})</option><option value="std">en afinación estándar</option></select></label>
       <span class="note">Los trastes son los mismos; la app ajusta qué notas espera escuchar y cómo suenan.</span></div>`}
+    <div class="ms-block"><b>Movimiento de la tab</b><span class="note">Al escuchar y al tocar con tempo.</span>
+      <div class="seg" role="radiogroup" aria-label="Movimiento de la tab"><button role="radio" data-mov="nota">Nota por nota</button><button role="radio" data-mov="continuo">Continuo</button></div>
+      <span class="note" id="tbMovNote"></span></div>
     <div class="ms-block"><b>Con tempo</b>
       <label class="switch"><input type="checkbox" id="tbClick"> Clic de metrónomo en cada tiempo</label>
       <label class="switch"><input type="checkbox" id="tbAuto"> Subir la velocidad sola: +5% cuando una vuelta sale con 90% o más, −5% si baja de 70%</label></div>
     <div class="ms-block"><b>Micrófono</b><span class="note">Sensibilidad, ruido del cuarto, prueba de bocinas y retraso del micrófono (para calificar a tiempo en Con tempo).</span>
       <button class="btn" id="tbMicSet">Ajustar micrófono</button></div>
     <div class="row sheet-foot"><button class="btn primary" data-close>Listo</button></div>`;
+  const paintMov = () => {
+    const m = smoothMove() ? "continuo" : "nota";
+    body.querySelectorAll("[data-mov]").forEach(b => b.setAttribute("aria-checked", b.dataset.mov === m));
+    $("#tbMovNote", body).textContent = m === "continuo" ? "La marca se desliza a velocidad constante entre notas. Se lee mejor en tempos rápidos." : "La marca salta a cada nota cuando suena. Se lee mejor en tempos lentos.";
+  };
+  body.querySelectorAll("[data-mov]").forEach(b => b.onclick = () => { data.ajustes.tabMov = b.dataset.mov; save(); paintMov(); });
+  paintMov();
   const ck = $("#tbClick", body), au = $("#tbAuto", body);
   ck.checked = data.ajustes.tabClick !== false; au.checked = data.ajustes.tabAuto !== false;
   ck.onchange = () => { data.ajustes.tabClick = ck.checked; save(); }; au.onchange = () => { data.ajustes.tabAuto = au.checked; save(); };
@@ -785,13 +812,15 @@ function frameDraw() {
   let k = T.k; while (k + 1 < ev.length && ev[k + 1].at <= now) k++;
   if (now < ev[0].at) {
     const left = ev[0].at - now, beatsLeft = Math.ceil((T.t0 - now) / T.countIn.dur);
-    staff.play(staff.xAt(ev[0].i, 0) - Math.min(30, left * 60), ev[0].i);
+    if (smoothMove()) staff.play(staff.xAt(ev[0].i, 0) - Math.min(30, left * 60), ev[0].i);
+    else if (staff.cur !== ev[0].i || staff.playX != null) { staff.endPlay(); staff.setCursor(ev[0].i); }
     $("#tbLab", el).textContent = now < T.t0 && beatsLeft > 0 ? `Entrada: ${beatsLeft}` : "¡Ya!";
     if (T.k !== -1 || $("#tbSub", el).dataset.c !== "in") { $("#tbSub", el).dataset.c = "in"; T.k = -1; showAt(ev[0].i); }
     return;
   }
   const a = ev[k], b = ev[k + 1], frac = b ? (now - a.at) / (b.at - a.at) : Math.min(1, (now - a.at) / .5);
-  staff.play(staff.xAt(a.i, frac), a.i);
+  if (smoothMove()) staff.play(staff.xAt(a.i, frac), a.i);
+  else if (k !== T.k) { staff.endPlay(); staff.setCursor(a.i); }
   if (k !== T.k) { T.k = k; $("#tbSub", el).dataset.c = ""; showAt(a.i); $("#tbLab", el).textContent = T.mic ? "Tocando" : "Tocando (sin calificar)"; }
 }
 function showAt(i) { L.view = i; show(); }
