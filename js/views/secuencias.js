@@ -5,9 +5,10 @@ import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { classify, chordTemplate } from "../detect.js";
 import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
-import { openMicSettings, warnGuideEcho } from "../ui/calib.js";
+import { openMicSettings, warnGuideEcho, sheet, close as closeSheet } from "../ui/calib.js";
 import { allPatterns, patternById, playHit, STRUM_SYMBOL } from "./rasgueo.js";
 import { LIBRARY, CATS, DIFF, difficulty } from "../plan.js";
+import { BigChords } from "../ui/bigchord.js";
 
 let el;
 const BEATS = [1, 2, 3, 4, 6, 8];
@@ -73,7 +74,7 @@ function nextBpm(bpm, ratio) {
 }
 
 /* ---------- Montaje ---------- */
-let hw, fb, judge, micWarned = false;
+let hw, fb, judge, big, micWarned = false;
 export function mountSecuencias(container) {
   el = container; ensure();
   el.innerHTML = `
@@ -86,6 +87,7 @@ export function mountSecuencias(container) {
         <button role="radio" data-sqm="aprender">Aprender</button><button role="radio" data-sqm="tempo">Con tempo</button>
       </div>
       <select id="sqPick" aria-label="Elegir secuencia"></select>
+      <button class="btn small" id="sqBrowse" title="Buscar canción por género y dificultad"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Canciones</button>
       <span id="sqManual" class="row" style="gap:6px" hidden><input type="number" id="sqBpm" min="40" max="200" aria-label="Tempo en BPM" style="width:80px"></span>
       <select id="sqStrum" aria-label="Rasgueo" style="flex:0 1 210px"></select>
       <span class="deck-tempo" id="sqTempoTop"></span><span id="sqTitle" hidden></span>
@@ -111,6 +113,7 @@ export function mountSecuencias(container) {
       <button class="btn primary" id="sqSave">Guardar</button><button class="btn" id="sqDrop">Descartar</button></div>
     </div>
     <div class="lprog" id="sqLearnProg" hidden></div>
+    <div id="sqBig"></div>
     <div class="deck-ctl">
       <label class="chip-toggle"><input type="checkbox" id="sqAuto"> Tempo automático</label>
       <label class="chip-toggle"><input type="checkbox" id="sqMic"> Calificar con micrófono</label>
@@ -129,9 +132,11 @@ export function mountSecuencias(container) {
   </div>
   </div>`;
   hw = new Highway($("#sqHwy", el), { mode: "chords" });
+  big = new BigChords($("#sqBig", el));
   fb = new Feedback($("#sqStage", el));
   judge = new ChordJudge({ onResult: (s, st) => { hw.mark(s.id, st); if (P.run && s.isChange) fb.show(st); } });
   $("#sqPick", el).onchange = e => { if (P.run) return; data.ajustes.secId = e.target.value; save(); render(); };
+  $("#sqBrowse", el).onclick = () => { if (!P.run && !LRN.run) openBrowser(); };
   $("#sqAuto", el).onchange = e => { const q = cur(); q.auto = e.target.checked; save(); renderTempo(); idle(); };
   $("#sqMic", el).onchange = e => { data.ajustes.secMic = e.target.checked; save(); renderStats(); };
   $("#sqBpm", el).onchange = e => { const q = cur(); q.bpm = clampBpm(+e.target.value || q.bpm); e.target.value = q.bpm; save(); renderTempo(); idle(); };
@@ -189,6 +194,7 @@ function stageShow(name, next) {
   swapText($("#sqNow", el), name || "—");
   $("#sqNextBox", el).hidden = !next; $("#sqNext", el).textContent = next || "";
   $("#sqNextDiag", el).innerHTML = next && CHORDS[next] ? diagram(next) : "";
+  big?.set(name || null, next || null);
 }
 function idle() {
   const q = cur(), a0 = q.acordes[0], nx = q.acordes.find(a => a.c !== (a0 && a0.c));
@@ -565,4 +571,37 @@ function offerTempo(med) {
   box.querySelector("#goNow").onclick = go;
   box.querySelector("#goStay").onclick = () => { clearInterval(LRN.goIv); box.hidden = true; LRN.tPrompt = performance.now(); };
   LRN.goIv = setInterval(() => { n--; if (n <= 0) go(); else { paint(); box.querySelector("#goNow").onclick = go; box.querySelector("#goStay").onclick = () => { clearInterval(LRN.goIv); box.hidden = true; }; } }, 1000);
+}
+
+
+/* ---------- Buscador de canciones: por género, dificultad y texto ---------- */
+function openBrowser() {
+  const f = data.ajustes.secFilt = data.ajustes.secFilt || { cat: "todas", dif: "todas", q: "" };
+  const { body } = sheet("Elegir canción");
+  body.closest(".sheet").classList.add("wide");
+  const songs = (data.canciones || []).filter(s => list().some(q => q.cancion === s.id));
+  const catCount = k => songs.filter(s => (s.cat || "otras") === k).length;
+  body.innerHTML = `
+    <div class="brw-filters">
+      <input type="search" id="brQ" placeholder="Buscar canción o artista" value="${esc(f.q)}" aria-label="Buscar">
+      <div class="seg" role="radiogroup" aria-label="Dificultad" id="brDif">${["todas", "facil", "intermedia", "avanzada"].map(d => `<button role="radio" data-d="${d}" aria-checked="${f.dif === d}">${d === "todas" ? "Toda dificultad" : DIFF[d]}</button>`).join("")}</div>
+    </div>
+    <div class="brw-cats" role="radiogroup" aria-label="Género">${[["todas", "Todos los géneros"], ...Object.entries(CATS)].filter(([k]) => k === "todas" || catCount(k)).map(([k, v]) => `<button role="radio" data-c="${k}" aria-checked="${f.cat === k}">${v}${k === "todas" ? "" : ` <small>${catCount(k)}</small>`}</button>`).join("")}</div>
+    <div class="brw-list" id="brList"></div>`;
+  const paint = () => {
+    const q = f.q.trim().toLowerCase();
+    const res = songs.filter(s => (f.cat === "todas" || (s.cat || "otras") === f.cat) && (f.dif === "todas" || difficulty(s.nivel) === f.dif) && (!q || (s.titulo + " " + s.artista).toLowerCase().includes(q)))
+      .sort((a, b) => (a.nivel || 1) - (b.nivel || 1) || a.titulo.localeCompare(b.titulo));
+    $("#brList", body).innerHTML = res.length ? res.map(s => {
+      const d = difficulty(s.nivel), seqs = list().filter(x => x.cancion === s.id);
+      return `<div class="brw-row"><div class="brw-t"><b>${esc(s.titulo)}</b> <span class="dchip ${d}">${DIFF[d]}</span><small>${esc(s.artista)}${s.anio ? " · " + s.anio : ""} · ${esc(CATS[s.cat || "otras"])}</small></div>
+        <div class="brw-seqs">${seqs.map(x => `<button class="btn small ${x.id === data.ajustes.secId ? "primary" : ""}" data-pick="${x.id}">${esc(x.nombre.split(" · ").slice(1).join(" · ") || "practicar")} <span class="note">${[...new Set(x.acordes.map(a => a.c))].join(" ")}</span></button>`).join("")}</div></div>`;
+    }).join("") : `<p class="note">No hay canciones con estos filtros.</p>`;
+    $("#brList", body).querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { data.ajustes.secId = b.dataset.pick; save(); closeSheet(); render(); });
+  };
+  body.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { f.dif = b.dataset.d; body.querySelectorAll("[data-d]").forEach(x => x.setAttribute("aria-checked", x === b)); save(); paint(); });
+  body.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { f.cat = b.dataset.c; body.querySelectorAll("[data-c]").forEach(x => x.setAttribute("aria-checked", x === b)); save(); paint(); });
+  $("#brQ", body).oninput = e => { f.q = e.target.value; paint(); };
+  paint();
+  setTimeout(() => $("#brQ", body).focus(), 50);
 }

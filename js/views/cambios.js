@@ -6,6 +6,7 @@ import * as A from "../audio.js";
 import { chordTemplate, LAB_MIN, LAB_DIFF } from "../detect.js";
 import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
 import { openChordCalibration, openMicSettings } from "../ui/calib.js";
+import { BigChords } from "../ui/bigchord.js";
 
 const C = { mode: "mic", run: false, tick: null, t0: 0, next: 0, k: 0, auto: 0, bpm: 60, per: 4, lastWarn: 0, micRes: null, listen: false };
 const D = { loop: null, det: null, cal: null };
@@ -41,6 +42,7 @@ export function mountCambios(el) {
       </div>
       <div class="nextbox" id="stNextBox"><span class="lab">Sigue</span><span class="nxt" id="stNext"></span><span class="stage-chord" id="stNextDiag"></span></div>
     </div>
+    <div id="cBig"></div>
     <div class="panel hl" id="cResult" hidden>
       <div class="label" id="resLabel"></div>
       <div class="row"><div class="stepper"><button class="icon-btn" id="rMinus" aria-label="Uno menos">−</button><input type="number" id="resN" min="0" max="300" value="0" aria-label="Cambios"><button class="icon-btn" id="rPlus" aria-label="Uno más">+</button></div>
@@ -85,6 +87,7 @@ export function mountCambios(el) {
   </div>
   </div>`;
   hw = new Highway($("#cHwy", el), { mode: "chords" });
+  big = new BigChords($("#cBig", el));
   fb = new Feedback($("#stage", el));
   judge = new ChordJudge({ onResult: onJudge });
   let p = null; try { p = JSON.parse(localStorage.getItem("riff-par") || "null"); } catch (e) {}
@@ -198,22 +201,25 @@ function setMode(m) {
 const mins = () => +($("#cDur", cel)?.value || 1);
 const fmt = s => s >= 60 ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : String(Math.ceil(s));
 function diag(name) { return CHORDS[name] ? diagram(name) : ""; }
+let big;
 function showNow(name, sub) {
   const n = $("#stNum", cel), changed = n.textContent !== name || n.classList.contains("big");
   n.classList.remove("big"); n.classList.add("chordnow"); swapText(n, name);
   if (changed) $("#stDiag", cel).innerHTML = diag(name);
+  big?.set(name);
   if (sub !== undefined) $("#stSub", cel).textContent = sub;
 }
 function showNext(name) {
   $("#stNextBox", cel).hidden = !name; $("#stNext", cel).textContent = name || "";
   $("#stNextDiag", cel).innerHTML = name ? diag(name) : "";
+  big?.set(undefined, name || null);
 }
 function idle() {
   $("#stage", cel).classList.remove("live"); $("#stLab", cel).textContent = "Listo";
   const tp = C.mode === "guia" ? guiaTempo() : null;
   $("#cTempo", cel).innerHTML = tp ? `${tp.bpm}<small>BPM</small>` : "";
   if (C.mode === "libre") {
-    $("#stNum", cel).className = "big"; $("#stNum", cel).textContent = fmt(mins() * 60); $("#stDiag", cel).innerHTML = diag(A_());
+    $("#stNum", cel).className = "big"; $("#stNum", cel).textContent = fmt(mins() * 60); $("#stDiag", cel).innerHTML = diag(A_()); big?.set(A_());
     showNext(B_()); $("#stSub", cel).textContent = "Tendrás 3 segundos para poner las manos en la guitarra";
   } else {
     showNow(A_(), tp ? `${tp.bpm} BPM · cambias cada ${tp.per} ${tp.per === 1 ? "tiempo" : "tiempos"} · ${tp.cpm} cambios por minuto` : "Empieza con " + A_() + " y cambia a tu ritmo");

@@ -10,7 +10,7 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, tabs y riffs nota por nota, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
 | **Acordes** | 44 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 96 canciones ordenado por categoría (pop y rock de los 80, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords y respaldo de datos. |
+| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 119 canciones ordenado por categoría (pop y rock de los 80, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 
@@ -73,6 +73,7 @@ Para progresiones nuevas, el modo **Aprender** muestra un acorde a la vez con su
 En **Practicar → Secuencias** armas la progresión de una canción (por ejemplo `G D Em C`) y la practicas en orden con clic. La pantalla muestra el acorde actual, el que sigue y sus diagramas.
 
 - Escribe la secuencia de una vez: `G:2 C:2 D:4` cambia los tiempos y `A7 x4` repite.
+- **Canciones** (junto al selector) abre un buscador por género, dificultad y nombre, con las partes de cada canción y sus acordes.
 - Puedes ligarla a una canción del repertorio; aparece un botón para practicarla desde Progreso y desde la canción del día.
 - El tempo sube o baja solo con las mismas reglas del entrenador de cambios.
 - **Rasgueo en la secuencia:** elige un patrón (por defecto, el sugerido de la canción) y sus golpes ↓ ↑ ✕ aparecen dentro de cada acorde en el carril y, en grande, en la tarjeta principal, con la casilla que suena iluminada y el siguiente golpe marcado. Con *Sonido guía*, la app toca la canción con ese rasgueo.
@@ -112,6 +113,7 @@ Las tabs importadas se guardan **solo en tu dispositivo** (no están en este rep
 En la computadora, dentro de Practicar:
 
 - **Pantalla completa** (botón arriba a la derecha o tecla **F**): deja solo el panel de práctica y el carril o la tab crecen para usar todo el alto. Se sale con **Esc**, **F** o el botón *Salir*.
+- En **Cambios** y **Secuencias**, la pantalla completa agrega abajo un **panel grande del acorde**: diagrama con los dedos en colores, una mano que muestra qué dedo va dónde (índice, medio, anular, meñique) con su cuerda y traste, el acorde que sigue y qué dedos se quedan fijos o se deslizan en el cambio.
 - **Panel**: oculta la columna de la derecha (lista de tabs, editor, estadísticas) para que la práctica use todo el ancho. Se recuerda.
 - **Contraer** (abajo en el menú lateral): deja el menú solo con íconos.
 
