@@ -194,3 +194,6 @@ details summary{cursor:pointer;font-weight:600}
 .level-card[open] summary::before{content:"▾"}
 .level-card summary .chip{flex-shrink:0;margin-left:auto}
 .songrow select{max-width:140px}
+.lvlbar{position:relative;overflow:visible}
+.lvlbar > div{border-radius:99px}
+.lvlbar > i{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);border-radius:1px;left:20%}

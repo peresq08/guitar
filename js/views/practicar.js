@@ -61,7 +61,12 @@ function mountCambios(el) {
       <div class="row"><button class="btn small" id="micBtn">Activar micrófono</button><span class="note" id="micStatus">El navegador te pedirá permiso.</span></div>
       <div class="meter"><b id="mA"></b><div class="bar"><div id="barA"></div></div><span id="sA">–</span></div>
       <div class="meter"><b id="mB"></b><div class="bar"><div id="barB"></div></div><span id="sB">–</span></div>
-      <div class="meter"><b>Nivel</b><div class="bar"><div id="barL" class="lvl"></div></div><span></span></div>
+      <div class="meter"><b>Volumen</b><div class="bar lvlbar"><div id="barL" class="lvl"></div><i id="gateMark" title="Umbral"></i></div><span id="sL"></span></div>
+      <p class="note" id="lvlHint">Cuando tocas, la barra de volumen debe pasar la línea.</p>
+      <div class="row">
+        <label class="field" for="micSens" style="flex:1">Sensibilidad<select id="micSens"><option value="alta">Alta (cuarto silencioso)</option><option value="media">Media</option><option value="baja">Baja (cuarto con ruido)</option></select></label>
+        <button class="btn small" id="micNoise" style="align-self:flex-end">Medir ruido</button>
+      </div>
       <div class="row"><button class="btn small" id="calA"></button><button class="btn small" id="calB"></button></div>
       <p class="note">Calibra cada acorde una vez: rasguéalo 3 segundos con tu guitarra y en tu cuarto. Mejora mucho la detección, sobre todo en pares parecidos como D y Dm.</p>
     </div>
@@ -82,6 +87,13 @@ function mountCambios(el) {
   ["cA", "cB"].forEach(id => $("#" + id, el).onchange = () => setPair($("#cA", el).value, $("#cB", el).value));
   el.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => !C.run && setMode(b.dataset.mode));
   $("#micBtn", el).onclick = startMic;
+  const sens = $("#micSens", el); sens.value = data.ajustes.micSens || "media"; A.setSensitivity(sens.value);
+  sens.onchange = () => { data.ajustes.micSens = sens.value; A.setSensitivity(sens.value); save(); };
+  $("#micNoise", el).onclick = async () => {
+    if (C.run || !(await startMic())) return;
+    const st = $("#micStatus", cel); st.textContent = "Silencia las cuerdas con la mano y no toques…";
+    await A.measureNoise(1200); st.textContent = "Listo. Ruido de fondo medido.";
+  };
   $("#calA", el).onclick = () => calibrate("A"); $("#calB", el).onclick = () => calibrate("B");
   $("#cStart", el).onclick = startChallenge;
   const rn = $("#resN", el);
@@ -142,13 +154,14 @@ function theoTpl(name) {
   return A.norm(v);
 }
 const tpl = n => data.calibracion[n] || theoTpl(n);
+const LAB_MIN = .55, LAB_DIFF = .04;
 async function startMic() {
   const st = $("#micStatus", cel);
   if (A.mic.an) return true;
-  st.textContent = "Midiendo el ruido del cuarto, no toques un segundo…";
+  st.textContent = "Silencia las cuerdas con la mano un segundo mientras mido el ruido…";
   const ok = await A.micOn();
   if (!ok) { st.textContent = A.mic.error; return false; }
-  $("#micBtn", cel).hidden = true; st.textContent = "Micrófono listo. Toca un acorde para probar.";
+  $("#micBtn", cel).hidden = true; st.textContent = "Micrófono listo. Toca un acorde y mira las barras.";
   if (!D.loop) D.loop = setInterval(micTick, 50);
   return true;
 }
@@ -156,15 +169,19 @@ function micTick() {
   if (root.hidden || cel.hidden || C.mode !== "mic") { if (!D.det && !D.cal) return; }
   const fr = A.chroma(), a = $("#cA", cel).value, b = $("#cB", cel).value;
   const sa = fr.on ? A.cosSim(fr.chroma, tpl(a)) : 0, sb = fr.on ? A.cosSim(fr.chroma, tpl(b)) : 0;
-  $("#barL", cel).style.width = Math.min(100, fr.rms / A.mic.floor * 25) + "%";
+  $("#barL", cel).style.width = A.meterPos(fr.rms) * 100 + "%";
+  $("#gateMark", cel).style.left = A.meterPos(A.gate()) * 100 + "%";
+  $("#barL", cel).classList.toggle("win", fr.on);
   $("#barA", cel).style.width = sa * 100 + "%"; $("#barB", cel).style.width = sb * 100 + "%";
   $("#sA", cel).textContent = fr.on ? Math.round(sa * 100) : "–"; $("#sB", cel).textContent = fr.on ? Math.round(sb * 100) : "–";
-  let lab = null; if (fr.on && Math.max(sa, sb) > .55 && Math.abs(sa - sb) > .04) lab = sa > sb ? "A" : "B";
+  let lab = null; if (fr.on && Math.max(sa, sb) > LAB_MIN && Math.abs(sa - sb) > LAB_DIFF) lab = sa > sb ? "A" : "B";
   $("#barA", cel).classList.toggle("win", lab === "A"); $("#barB", cel).classList.toggle("win", lab === "B");
   if (D.cal && fr.on) D.cal.push(fr.chroma);
-  const d = D.det; if (!d) return;
+  const d = D.det; if (!d || !lab) return;   // los cuadros sin sonido claro no interrumpen el conteo
   if (lab === d.cand) d.cc++; else { d.cand = lab; d.cc = 1; }
-  if (lab && d.cc === 3 && lab !== d.cur) {
+  // Un cambio cuenta si el acorde nuevo se sostiene ~150 ms y pasó un mínimo de tiempo desde el anterior
+  if (d.cc >= 3 && lab !== d.cur && performance.now() - d.lastT > 300) {
+    d.lastT = performance.now();
     if (d.pending && d.hold >= d.clean) d.cleanN++;
     if (d.cur) d.changes++;
     d.pending = !!d.cur; d.cur = lab; d.hold = 0;
@@ -177,9 +194,9 @@ async function calibrate(which) {
   btn.disabled = true;
   for (let i = 3; i > 0; i--) { st.textContent = `Prepárate para rasguear ${name}… ${i}`; A.beep(800, .07); await new Promise(r => setTimeout(r, 1000)); }
   A.beep(1200, .12); D.cal = []; st.textContent = `Rasguea ${name} varias veces…`;
-  await new Promise(r => setTimeout(r, 3000));
+  await new Promise(r => setTimeout(r, 4000));
   const fr = D.cal; D.cal = null; btn.disabled = false;
-  if (fr.length < 15) { st.textContent = "No escuché suficiente sonido. Acércate al teléfono y rasguea más fuerte."; return; }
+  if (fr.length < 8) { st.textContent = "Casi no escuché la guitarra: la barra de volumen no pasó la línea. Sube la sensibilidad o acerca el teléfono y vuelve a intentar."; return; }
   const avg = new Array(12).fill(0); fr.forEach(c => c.forEach((x, i) => avg[i] += x));
   data.calibracion[name] = A.norm(avg); save(); A.chime();
   st.textContent = `${name} calibrado.`; setPair($("#cA", cel).value, $("#cB", cel).value);
@@ -197,7 +214,7 @@ async function startChallenge() {
   [0, 1, 2].forEach(i => A.beep(800, .07, a.currentTime + i));
   if (C.mode === "mic") {
     const both = data.calibracion[$("#cA", cel).value] && data.calibracion[$("#cB", cel).value];
-    setTimeout(() => { if (C.run) D.det = { cur: null, cand: null, cc: 0, changes: 0, cleanN: 0, hold: 0, pending: false, clean: both ? .85 : .75 }; }, 3000);
+    setTimeout(() => { if (C.run) D.det = { cur: null, cand: null, cc: 0, lastT: 0, changes: 0, cleanN: 0, hold: 0, pending: false, clean: both ? .85 : .75 }; }, 3000);
   }
   $("#stage", cel).classList.add("live"); $("#cStart", cel).textContent = "Cancelar";
   $("#cA", cel).disabled = $("#cB", cel).disabled = true;

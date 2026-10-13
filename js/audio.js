@@ -100,7 +100,27 @@ export async function keepAwake(on) {
 }
 
 /* ---- Micrófono ---- */
-export const mic = { an: null, tb: null, fb: null, floor: .006, error: "" };
+// El umbral de "hay sonido" se adapta solo: baja de inmediato en cuanto hay un momento de silencio
+// (así se corrige si al activar el micrófono la guitarra estaba sonando) y sube despacio si el cuarto se vuelve más ruidoso.
+const NOISE_CAP = .003, GATE_MIN = .0003;
+export const mic = { an: null, tb: null, fb: null, noise: .0005, sens: 2.5, error: "" };
+export const SENS = { alta: 1.8, media: 2.5, baja: 4 };
+export function setSensitivity(k) { mic.sens = SENS[k] || SENS.media; }
+export function gate() { return Math.max(mic.noise * mic.sens, GATE_MIN); }
+function track(rms) {
+  if (rms < 1e-6) return;                              // búfer vacío al arrancar
+  if (rms < mic.noise) mic.noise = rms;                // silencio: baja de inmediato
+  else if (rms < mic.noise * 4) mic.noise *= 1.003;    // ruido de fondo que crece: sube despacio
+  mic.noise = Math.min(mic.noise, NOISE_CAP);
+}
+export async function measureNoise(ms = 1000) {
+  const rs = []; const n = Math.max(5, Math.round(ms / 50));
+  await new Promise(r => { const t = setInterval(() => { rs.push(rawLevel()); if (rs.length >= n) { clearInterval(t); r(); } }, 50); });
+  const v = rs.filter(x => x > 1e-6).sort((x, y) => x - y);
+  mic.noise = Math.min(NOISE_CAP, v.length ? v[Math.floor(v.length * .2)] : .0005);
+}
+// Nivel en una escala de 0 a 1 (de −70 a −10 dBFS) para dibujar el medidor
+export const meterPos = rms => Math.max(0, Math.min(1, (20 * Math.log10(Math.max(rms, 1e-7)) + 70) / 60));
 export async function micOn() {
   if (mic.an) return true;
   const a = ctx();
@@ -110,15 +130,15 @@ export async function micOn() {
     const src = a.createMediaStreamSource(st); const an = a.createAnalyser(); an.fftSize = 8192; an.smoothingTimeConstant = .35;
     src.connect(an); mic.an = an; mic.tb = new Float32Array(an.fftSize); mic.fb = new Float32Array(an.frequencyBinCount);
   } catch (e) { mic.error = "Sin permiso para el micrófono. Actívalo en la configuración del navegador para esta página."; return false; }
-  // Ruido de fondo
-  const rs = []; await new Promise(r => { const t = setInterval(() => { rs.push(level()); if (rs.length >= 16) { clearInterval(t); r(); } }, 50); });
-  rs.sort((x, y) => x - y); mic.floor = Math.max(.004, rs[Math.floor(rs.length * .8)] * 3);
+  await new Promise(r => setTimeout(r, 250));   // deja que el búfer se llene
+  await measureNoise(1000);
   return true;
 }
-export function level() {
+function rawLevel() {
   mic.an.getFloatTimeDomainData(mic.tb); let r = 0; const b = mic.tb;
   for (let i = 0; i < b.length; i++) r += b[i] * b[i]; return Math.sqrt(r / b.length);
 }
+export function level() { const r = rawLevel(); track(r); return r; }
 export const norm = v => { let s = 0; for (const x of v) s += x * x; s = Math.sqrt(s) || 1; return Array.from(v, x => x / s); };
 export const cosSim = (a, b) => { let s = 0; for (let i = 0; i < 12; i++) s += a[i] * b[i]; return s; };
 export function chroma() {
@@ -129,11 +149,11 @@ export function chroma() {
     const p = Math.pow(10, db / 10), m = 69 + 12 * Math.log2((k * sr / n) / 440), rm = Math.round(m), d = Math.abs(m - rm);
     if (d < .4) ch[((rm % 12) + 12) % 12] += p * (1 - d * 2);
   }
-  return { rms, chroma: norm(ch), on: rms > mic.floor };
+  return { rms, chroma: norm(ch), on: rms > gate() };
 }
 // Detección de tono (NSDF / McLeod) para el afinador
 export function pitch() {
-  const rms = level(); if (rms < mic.floor) return { rms, f: 0, clarity: 0 };
+  const rms = level(); if (rms < gate()) return { rms, f: 0, clarity: 0 };
   const sr = ac.sampleRate, b = mic.tb, N = Math.min(b.length, 3072), off = b.length - N;
   const minLag = Math.floor(sr / 1000), maxLag = Math.min(Math.floor(sr / 65), N - 1);
   const nsdf = new Float32Array(maxLag + 2);
