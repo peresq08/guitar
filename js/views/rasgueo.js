@@ -433,7 +433,7 @@ function grade() {
       <p>${tip}</p>
       <p class="note">Bajo cada casilla: verde = parejo, naranja = más de 20 ms fuera, rojo = golpes faltantes. ±25 ms o menos es un ritmo sólido.</p>
       <div class="row"><button class="btn primary" data-apply="${nb}">${nb > R.bpm ? `Subir a ${nb} BPM` : nb < R.bpm ? `Bajar a ${nb} BPM` : `Repetir a ${nb} BPM`}</button>${nb !== R.bpm ? `<button class="btn" data-apply="${R.bpm}">Quedarme en ${R.bpm}</button>` : ""}</div>`;
-    record(p, good ? R.bpm : 0, Math.round(hitRate * 100));
+    record(p, good ? R.bpm : 0, Math.round(hitRate * 100), tip);
   } else {
     box.innerHTML = `<div class="label">¿Cómo te salió a ${R.bpm} BPM?</div>
       <div class="row"><button class="btn primary" data-apply="${clampB(R.bpm + 5)}" data-clean="1">Limpio: subir a ${clampB(R.bpm + 5)}</button>
@@ -447,8 +447,9 @@ function grade() {
     toast(+b.dataset.apply > R.startBpm ? `¡A ${b.dataset.apply} BPM!` : `Tempo: ${b.dataset.apply} BPM`);
   });
 }
-function record(p, cleanBpm, score) {
+function record(p, cleanBpm, score, tip) {
   const s = store(), g = { ...prog(p.id) };
+  g.nombre = p.nombre; if (tip !== undefined) g.tip = tip;
   g.hist = [...(g.hist || []), { t: new Date().toISOString(), bpm: R.bpm, limpio: !!cleanBpm, score }].slice(-60);
   if (cleanBpm && cleanBpm > (g.best || 0)) g.best = cleanBpm;
   s.prog[p.id] = g; save();

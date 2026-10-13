@@ -1,5 +1,5 @@
 // Camino de aprendizaje: niveles, metas y la rutina que se arma según tu nivel.
-import { data, bestFor, streak, bestStreak, save } from "./store.js";
+import { data, bestFor, streak, bestStreak, save, tabs } from "./store.js";
 
 // Metas: auto() devuelve true cuando los datos ya demuestran que se cumplió.
 export const LEVELS = [
@@ -206,16 +206,44 @@ export const LIBRARY = [
   { titulo: "En algún lugar", artista: "Duncan Dhu", anio: 1987, nivel: 2, bpm: 140, rasgueo: "pop", cat: "espanol", tip: "G, Em, C y D; el coro agrega F (mini) y Dsus4.", secuencias: [{ nombre: "estrofa", acordes: "G Em C D" }, { nombre: "coro", acordes: "C D C D G Em C F (mini) Dsus4 D" }] },
   { titulo: "Déjame", artista: "Los Secretos", anio: 1981, nivel: 5, bpm: 150, rasgueo: "rock8", cat: "espanol", tip: "Dm, Am, Bb, F y C; el coro cambia a D, F#m, G y A (en la grabación, F#m7).", secuencias: [{ nombre: "estrofa", acordes: "Dm Am Bb F C" }, { nombre: "coro (simplificado)", acordes: "D F#m G A" }] },
   { titulo: "La chispa adecuada", artista: "Héroes del Silencio", anio: 1993, nivel: 5, bpm: 76, rasgueo: "balada", cat: "espanol", tip: "En Dm, con Gm y Bb (cejilla) y A7.", secuencias: [{ nombre: "estrofa", acordes: "Dm Gm Dm Gm F A7 Dm C Bb A7" }, { nombre: "estribillo", acordes: "Dm Am Dm Am Bb Dm Gm Dm" }] },
+  // Quinta tanda: rock suave de los 70 (Eagles, America, Fleetwood Mac), clásicos de radio y pop-rock de los 90
+  { titulo: "Take It Easy", artista: "Eagles", anio: 1972, nivel: 1, bpm: 138, rasgueo: "country", cat: "rock70", tip: "G, C y D con rasgueo de country-rock; el coro pasa por Em, Am y D.", secuencias: [{ nombre: "estrofa", acordes: "G G D C G D C G" }, { nombre: "coro", acordes: "Em C G G Am C Em D" }] },
+  { titulo: "Peaceful Easy Feeling", artista: "Eagles", anio: 1972, nivel: 2, bpm: 88, rasgueo: "country", cat: "rock70", tip: "D y G con A7; el coro agrega Em.", secuencias: [{ nombre: "estrofa", acordes: "D G D G D G A7 A7" }, { nombre: "coro", acordes: "G D G Em A7 D D D" }] },
+  { titulo: "Lyin' Eyes", artista: "Eagles", anio: 1975, nivel: 2, bpm: 120, rasgueo: "country", cat: "rock70", tip: "G, Gmaj7, C, Am y D. Coro simplificado sin el Bm y el A del original.", secuencias: [{ nombre: "estrofa", acordes: "G Gmaj7 C Am D G Gmaj7 C Am C G G" }, { nombre: "coro (simplificado)", acordes: "G C G Em Am D G G7 C C Am D G G" }] },
+  { titulo: "Tequila Sunrise", artista: "Eagles", anio: 1973, nivel: 2, bpm: 90, rasgueo: "country", cat: "rock70", tip: "G, D, Am y D7; la segunda parte baja a Em y C.", secuencias: [{ nombre: "estrofa", acordes: "G G D Am D7" }, { nombre: "segunda parte", acordes: "Em C Em Am D7" }] },
+  { titulo: "Already Gone", artista: "Eagles", anio: 1974, nivel: 1, bpm: 120, rasgueo: "rock8", cat: "rock70", tip: "G, D y C con energía de rock.", secuencias: [{ nombre: "estrofa", acordes: "G D C C G D C C" }, { nombre: "coro", acordes: "G D C G D C" }] },
+  { titulo: "A Horse with No Name", artista: "America", anio: 1971, nivel: 1, bpm: 122, rasgueo: "pop", cat: "rock70", tip: "Simplificada a Em y D. La original alterna Em con un D con notas agregadas (D6/9) y bajo en F#.", secuencias: [{ nombre: "toda la canción (simplificada)", acordes: "Em:4 D:4" }] },
+  { titulo: "Ventura Highway", artista: "America", anio: 1972, nivel: 5, bpm: 124, rasgueo: "pop", cat: "rock70", tip: "Dmaj7 y Gmaj7 en la estrofa; el coro pasa por F#m7 (cejilla) y Em7.", secuencias: [{ nombre: "estrofa", acordes: "Dmaj7 Gmaj7" }, { nombre: "coro", acordes: "Dmaj7 Gmaj7 Dmaj7 F#m7 Em7 F#m7 Em7 F#m7 Gmaj7" }] },
+  { titulo: "Sister Golden Hair", artista: "America", anio: 1975, nivel: 5, bpm: 128, rasgueo: "pop", cat: "rock70", tip: "E, G#m y A con cejillas en F#m, C#m y B.", secuencias: [{ nombre: "estrofa", acordes: "E G#m A E G#m A F#m C#m B A" }] },
+  { titulo: "Tin Man", artista: "America", anio: 1974, nivel: 2, bpm: 96, rasgueo: "balada", cat: "rock70", tip: "Gmaj7 y Cmaj7, con Am7. Simplificada: D en lugar de C/D y Am7 en lugar de Am9.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "Gmaj7 Cmaj7 Gmaj7 Cmaj7 Am7 Gmaj7 Am7 Gmaj7" }, { nombre: "coro (simplificado)", acordes: "D D Gmaj7 Cmaj7" }] },
+  { titulo: "Dreams", artista: "Fleetwood Mac", anio: 1977, nivel: 2, bpm: 120, rasgueo: "pop", cat: "rock70", tip: "Solo F (mini) y G en la estrofa; el coro alterna G y Am.", secuencias: [{ nombre: "estrofa", acordes: "F (mini) G" }, { nombre: "coro", acordes: "G Am G Am" }] },
+  { titulo: "Landslide", artista: "Fleetwood Mac", anio: 1975, nivel: 1, bpm: 80, rasgueo: "balada", cat: "rock70", tip: "Capo en el traste 3. Simplificada: G en lugar de G/B y D en lugar de D/F#. En la grabación es arpegio.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "C G Am G" }, { nombre: "coro (simplificado)", acordes: "G D Em C G Am D D" }] },
+  { titulo: "Go Your Own Way", artista: "Fleetwood Mac", anio: 1977, nivel: 5, bpm: 135, rasgueo: "rock8", cat: "rock70", tip: "F, C y Bb con cejilla; el coro con Dm, Bb y C.", secuencias: [{ nombre: "estrofa", acordes: "F C Bb F" }, { nombre: "coro", acordes: "Dm Bb C C" }] },
+  { titulo: "The Joker", artista: "Steve Miller Band", anio: 1973, nivel: 1, bpm: 108, rasgueo: "pop", cat: "rock70", tip: "G, C y D relajados, casi toda la canción.", secuencias: [{ nombre: "toda la canción", acordes: "G C D C" }] },
+  { titulo: "More Than a Feeling", artista: "Boston", anio: 1976, nivel: 1, bpm: 108, rasgueo: "rock8", cat: "rock70", tip: "Arpegio de D, Dsus4 y Cadd9 en la estrofa; coro con G, Cadd9, Em y D.", secuencias: [{ nombre: "estrofa", acordes: "D Dsus4 D Cadd9 G" }, { nombre: "coro", acordes: "G Cadd9 Em D" }] },
+  { titulo: "Simple Man", artista: "Lynyrd Skynyrd", anio: 1973, nivel: 1, bpm: 120, rasgueo: "balada", cat: "rock70", tip: "C, G y Am en arpegio. La grabación está medio tono abajo.", secuencias: [{ nombre: "toda la canción", acordes: "C G Am Am" }] },
+  { titulo: "Old Time Rock and Roll", artista: "Bob Seger", anio: 1978, nivel: 1, bpm: 120, rasgueo: "rock8", cat: "rock70", tip: "A, D y E: rock and roll de tres acordes.", secuencias: [{ nombre: "toda la canción", acordes: "A D E A" }] },
+  { titulo: "Night Moves", artista: "Bob Seger", anio: 1976, nivel: 2, bpm: 100, rasgueo: "pop", cat: "rock70", tip: "Capo en el traste 1. G, F (mini), C; el coro con D, Em y C.", secuencias: [{ nombre: "estrofa", acordes: "G F (mini) C F (mini)" }, { nombre: "coro", acordes: "D Em D C" }] },
+  { titulo: "Free Fallin'", artista: "Tom Petty", anio: 1989, nivel: 1, bpm: 84, rasgueo: "pop", cat: "rock80", tip: "Capo en el traste 3. D, Dsus4 y A toda la canción.", secuencias: [{ nombre: "toda la canción", acordes: "D Dsus4 D A" }] },
+  { titulo: "Learning to Fly", artista: "Tom Petty", anio: 1991, nivel: 2, bpm: 116, rasgueo: "pop", cat: "rock90", tip: "F (mini), C, Am y G toda la canción.", secuencias: [{ nombre: "toda la canción", acordes: "F (mini) C Am G" }] },
+  { titulo: "What's Up", artista: "4 Non Blondes", anio: 1992, nivel: 1, bpm: 126, rasgueo: "pop", cat: "rock90", tip: "G, Am y C con capo en el traste 2 (o A, Bm y D sin capo).", secuencias: [{ nombre: "toda la canción", acordes: "G Am C G" }] },
+  { titulo: "Save Tonight", artista: "Eagle-Eye Cherry", anio: 1997, nivel: 2, bpm: 120, rasgueo: "rock8", cat: "rock90", tip: "Am, F (mini), C y G toda la canción.", secuencias: [{ nombre: "toda la canción", acordes: "Am F (mini) C G" }] },
+  { titulo: "Don't Look Back in Anger", artista: "Oasis", anio: 1995, nivel: 2, bpm: 82, rasgueo: "pop", cat: "rock90", tip: "C, G, Am, E7, F (mini) y G.", secuencias: [{ nombre: "estrofa", acordes: "C G Am E7 F (mini) G C Am G" }] },
+  { titulo: "Mr. Jones", artista: "Counting Crows", anio: 1993, nivel: 2, bpm: 140, rasgueo: "pop", cat: "rock90", tip: "Am, F (mini), Dm y G; el coro sube a C.", secuencias: [{ nombre: "estrofa", acordes: "Am F (mini) Dm G" }, { nombre: "coro", acordes: "C F (mini) G G" }] },
+  { titulo: "Hey Jealousy", artista: "Gin Blossoms", anio: 1992, nivel: 5, bpm: 120, rasgueo: "rock8", cat: "rock90", tip: "D, E y F#m (cejilla); la segunda parte alterna A y D.", secuencias: [{ nombre: "estrofa", acordes: "D E F#m E" }, { nombre: "segunda parte", acordes: "A D A D" }] },
+  { titulo: "No Rain", artista: "Blind Melon", anio: 1992, nivel: 1, bpm: 148, rasgueo: "pop", cat: "rock90", tip: "E, D, A y G con aire acústico.", secuencias: [{ nombre: "estrofa", acordes: "E D A G" }] },
 ];
 // Categorías y dificultad para ordenar el repertorio
 export const CATS = {
-  rock80: "Pop y rock de los 80", espanol: "Rock en español", country: "Country y americana", metal: "Hard rock y metal",
+  rock80: "Pop y rock de los 80", rock70: "Rock suave de los 70", rock90: "Pop y rock de los 90", espanol: "Rock en español", country: "Country y americana", metal: "Hard rock y metal",
   clasico: "Rock clásico", alt: "Alternativo, grunge e indie", pop: "Pop y baladas", folk: "Folk y fogata", reggae: "Reggae y funk", otras: "Otras",
 };
 const CAT_OF = {
   metal: ["Every Rose Has Its Thorn", "Here I Go Again", "Patience", "Breaking the Law", "Back in Black", "Livin' on a Prayer", "Seek & Destroy", "Sweet Child O' Mine", "Knockin' on Heaven's Door", "Paranoid", "Iron Man"],
   rock80: ["Summer of '69", "Every Breath You Take", "Don't Stop Believin'", "With or Without You", "I Love Rock 'n' Roll", "Should I Stay or Should I Go", "Rockin' in the Free World"],
-  clasico: ["Hotel California", "Sweet Home Alabama", "Smoke on the Water", "You Really Got Me", "Wild Thing", "Louie Louie", "La Bamba", "Twist and Shout", "Let It Be", "Love Me Do", "Brown Eyed Girl", "Bad Moon Rising", "Have You Ever Seen the Rain", "Wonderful Tonight", "Imagine", "Stand by Me", "Wish You Were Here"],
+  rock70: ["Hotel California"],
+  rock90: ["Zombie", "Wonderwall", "Losing My Religion", "Good Riddance (Time of Your Life)", "More Than Words"],
+  clasico: ["Sweet Home Alabama", "Smoke on the Water", "You Really Got Me", "Wild Thing", "Louie Louie", "La Bamba", "Twist and Shout", "Let It Be", "Love Me Do", "Brown Eyed Girl", "Bad Moon Rising", "Have You Ever Seen the Rain", "Wonderful Tonight", "Imagine", "Stand by Me", "Wish You Were Here"],
   alt: ["Zombie", "Creep", "Wonderwall", "Boulevard of Broken Dreams", "Good Riddance (Time of Your Life)", "Smells Like Teen Spirit", "Losing My Religion", "Californication", "More Than Words"],
   pop: ["Perfect", "Someone Like You", "Despacito", "Hey There Delilah", "Riptide"],
   folk: ["Blowin' in the Wind", "Leaving on a Jet Plane", "Heart of Gold", "Hallelujah"],
@@ -244,7 +272,7 @@ export function ensureSongs() {
     if (song) {
       if (L.anio && !song.anio) { song.anio = L.anio; changed = true; }
       if (L.rasgueo && !song.rasgueo) { song.rasgueo = L.rasgueo; changed = true; }
-      if (L.cat && !song.cat) { song.cat = L.cat; changed = true; }
+      if (L.cat && song.cat !== L.cat) { song.cat = L.cat; changed = true; }
       if (L.tip && !song.tip) { song.tip = L.tip; changed = true; }
     }
   });
@@ -261,6 +289,31 @@ export function songOfDay(l = currentLevel()) {
 }
 
 /* ---- Rutina ---- */
+// Lo que más te cuesta según tus datos: el cambio de acordes con más fallos en Secuencias,
+// el compás de una tab donde más te atoras y el patrón de rasgueo que aún no sale parejo.
+export function weakSpots() {
+  const out = [], now = Date.now(), recent = t => t && now - new Date(t).getTime() < 21 * 864e5;
+  // Cambios de acordes
+  const agg = {};
+  for (const q of data.secuencias || []) for (const [k, v] of Object.entries(q.fallos || {})) { const a = agg[k] || (agg[k] = [0, 0]); a[0] += v[0]; a[1] += v[1]; }
+  const pairs = Object.entries(agg).filter(([, v]) => v[1] >= 4 && v[0] / v[1] < .8).sort((a, b) => a[1][0] / a[1][1] - b[1][0] / b[1][1]);
+  if (pairs.length) {
+    const [k, v] = pairs[0], [A, B] = k.split("→");
+    out.push({ n: "Tu cambio más difícil", w: 4, weak: true, tip: `${A} → ${B}: ${Math.round(v[0] / v[1] * 100)}% limpios en ${v[1]} intentos dentro de tus secuencias. Practícalo solo con el clic; el tempo sube cuando salga limpio.`, tool: "cambios", pair: [A, B], mode: "guia" });
+  }
+  // Tabs
+  const tb = Object.entries(data.tabsProg || {}).filter(([, p]) => p.dificil && recent(p.dificil.t)).sort((a, b) => b[1].dificil.t - a[1].dificil.t)[0];
+  if (tb) {
+    const [id, p] = tb, d = p.dificil, exists = id.startsWith("ej-") || tabs.some(t => t.id === id);
+    if (exists) out.push({ n: "Compás difícil", w: 4, weak: true, tip: `${d.titulo || "Tu tab"}: el compás ${d.a + 1} es donde más ${d.por === "tempo" ? "fallas con tempo" : "te tardas"}. Apréndelo nota por nota y luego vuelve a tocar la sección completa.`, tool: "tabs", tabId: id, tabSel: { a: d.a, b: d.b }, tabMode: "aprender" });
+  }
+  // Rasgueo
+  const rp = Object.entries(data.rasgueos?.prog || {}).map(([id, g]) => ({ id, g, last: (g.hist || [])[(g.hist || []).length - 1] }))
+    .filter(x => x.last && recent(x.last.t) && x.last.score != null && (x.last.score < 90 || !x.last.limpio)).sort((a, b) => new Date(b.last.t) - new Date(a.last.t))[0];
+  if (rp) out.push({ n: "Ritmo pendiente", w: 4, weak: true, tip: `${rp.g.nombre || "Tu patrón"}: la última ronda fue a ${rp.last.bpm} BPM con ${rp.last.score}% de golpes a tiempo. ${rp.g.tip || "Repite a ese tempo hasta que salga parejo."}`, tool: "rasgueo", pattern: rp.id });
+  return out.slice(0, 2);
+}
+
 export function buildRoutine(total = data.ajustes.rutinaMin || 30, l = currentLevel()) {
   const song = songOfDay(l);
   const pair = l.pair.join(" ↔ ");
@@ -268,7 +321,8 @@ export function buildRoutine(total = data.ajustes.rutinaMin || 30, l = currentLe
     { n: "Calentamiento", w: 3, tip: l.scale
         ? "Pentatónica menor caja 1 en La (traste 5), subiendo y bajando con púa alternada. Empieza a 60 BPM."
         : "Ejercicio cromático 1-2-3-4 en cada cuerda, trastes 1 al 4 y de regreso. Lento, limpio y con púa alternada.", tool: l.scale ? null : "metro" },
-    { n: "Acordes del nivel", w: 5, tip: "Arma cada acorde, toca cuerda por cuerda y corrige las que suenen apagadas. Luego cuatro rasgueos de cada uno.", chords: l.chords },
+    ...weakSpots(),
+    { n: "Acordes del nivel", w: weakSpots().length ? 3 : 5, tip: "Arma cada acorde, toca cuerda por cuerda y corrige las que suenen apagadas. Luego cuatro rasgueos de cada uno.", chords: l.chords },
     bestFor(pair)
       ? { n: "Cambios con tempo", w: 5, tip: `Dos o tres rondas de ${pair} con el clic. El tempo sube solo cuando tus cambios salen limpios. Récord actual: ${bestFor(pair)}.`, tool: "cambios", pair: l.pair, mode: "guia" }
       : { n: "Cambios en un minuto", w: 5, tip: `Haz un reto libre con ${pair} para medir tu punto de partida; luego el entrenador con clic ajustará el tempo por ti.`, tool: "cambios", pair: l.pair, mode: "libre" },

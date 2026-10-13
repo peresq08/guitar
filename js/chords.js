@@ -16,6 +16,12 @@ export const CHORDS = {
   "Em7": { f: "022033", d: "-12-34", g: "Menores" },
   "Am7": { f: "x02010", d: "--2-1-", g: "Menores" },
   "Dm7": { f: "xx0211", d: "---211", g: "Menores" },
+  "F#m7": { f: "242222", d: "131111", g: "Menores" },
+  // Séptimas mayores: el sonido suave de los 70
+  "Cmaj7": { f: "x32000", d: "-32---", g: "Séptimas y sus" },
+  "Fmaj7": { f: "xx3210", d: "--321-", g: "Séptimas y sus" },
+  "Gmaj7": { f: "320002", d: "32---1", g: "Séptimas y sus" },
+  "Dmaj7": { f: "xx0222", d: "---123", g: "Séptimas y sus" },
   // Séptimas y suspendidos
   "A7":  { f: "x02020", d: "--2-3-", g: "Séptimas y sus" },
   "D7":  { f: "xx0212", d: "---213", g: "Séptimas y sus" },
@@ -93,7 +99,7 @@ export const STD = [40, 45, 50, 55, 59, 64];
 export const STRING_NAMES = ["E", "A", "D", "G", "B", "e"];
 
 // Pentatónica menor (caja 1) o escala completa en el diapasón
-export function fretboard({ root = 4, intervals = [0, 3, 5, 7, 10], from = 0, to = 12, highlight = null } = {}) {
+export function fretboard({ root = 4, intervals = [0, 3, 5, 7, 10], from = 0, to = 12, highlight = null, played = null, playedCls = "" } = {}) {
   const frets = to - from, W = 520, H = 150, L = 26, R = 10, T = 18, B = 26;
   const fw = (W - L - R) / (frets + 1), sh = (H - T - B) / 5;
   const pcs = new Set(intervals.map(i => (root + i) % 12));
@@ -117,6 +123,13 @@ export function fretboard({ root = 4, intervals = [0, 3, 5, 7, 10], from = 0, to
       const x = L + (k + .5) * fw, isRoot = pc === root % 12, hl = highlight && highlight.has(pc);
       s += `<circle cx="${x}" cy="${y}" r="9" fill="${isRoot ? "var(--accent)" : hl ? "var(--good)" : "var(--panel)"}" stroke="${isRoot ? "var(--accent)" : hl ? "var(--good)" : "var(--ink)"}" stroke-width="1.5"/>`;
       s += `<text x="${x}" y="${y + 3.5}" font-size="9" font-weight="700" text-anchor="middle" fill="${isRoot || hl ? "var(--accent-ink)" : "var(--ink)"}" font-family="Barlow,sans-serif">${NOTES[pc]}</text>`;
+    }
+    // la nota que acabas de tocar (por micrófono), en todas las posiciones donde suena igual
+    if (played != null) for (let k = 0; k <= frets; k++) {
+      if (STD[st] + from + k !== played) continue;
+      const x = L + (k + .5) * fw, col = playedCls === "tone" ? "#41d184" : playedCls === "scale" ? "#5fb4ff" : "#ff5c4f";
+      s += `<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="${col}" stroke-width="3" style="filter:drop-shadow(0 0 6px ${col})"/>`;
+      if (!pcs.has((STD[st] + from + k) % 12)) s += `<text x="${x}" y="${y + 3.5}" font-size="9" font-weight="700" text-anchor="middle" fill="${col}" font-family="Barlow,sans-serif">${NOTES[played % 12]}</text>`;
     }
   }
   return s + `</svg>`;

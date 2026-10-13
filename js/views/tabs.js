@@ -188,7 +188,14 @@ export function mountTabs(container) {
   renderImport();
   render();
 }
-export function showTab(id) { if (allTabs().some(t => t.id === id)) { stopAll(); data.ajustes.tabId = id; save(); render(); } }
+export function showTab(id, opts = {}) {
+  if (!allTabs().some(t => t.id === id)) return;
+  stopAll(); data.ajustes.tabId = id;
+  const t = curTab(), p = prog(t);
+  if (opts.tabSel) { p.sel = { a: opts.tabSel.a, b: opts.tabSel.b, custom: true }; p.pos = null; }
+  if (opts.tabMode) p.modo = opts.tabMode;
+  save(); render();
+}
 export function stopTabs() { stopAll(); }
 function stopAll() { if (L.run) learnStop(); if (T.run) tempoStop(); if (PL.run) stopListen(); }
 
@@ -505,6 +512,8 @@ function sectionDone(t, r) {
     save();
   }
   const slow = L.slow.filter(x => x.dt > Math.max(1.5, (med || 0) * 2)).sort((a, b) => b.dt - a.dt).slice(0, 3);
+  if (slow.length) { const bar = t.ev[slow[0].i].c; p.dificil = { a: bar, b: bar, titulo: t.titulo, t: Date.now(), por: "aprender" }; save(); }
+  else if (p.dificil && p.dificil.a >= r.a && p.dificil.b <= r.b && med != null && med <= .8) { delete p.dificil; save(); }
   const tips = slow.map(x => { const e = t.ev[x.i]; return `compás ${e.c + 1} (${e.n.length > 1 ? `acorde de ${e.n.length} notas` : `${e.n[0][0] + 1}ª cuerda, traste ${e.n[0][1]}`})`; });
   if (data.ajustes.tabLoop) {
     L.pass++; L.idx = r.from; L.first = true; L.times = []; L.slow = []; L.tPrompt = performance.now(); L.tcAudio = A.now();
@@ -637,7 +646,8 @@ function openSettings() {
     <div class="ms-block"><b>Esta tab está en ${esc(tl.long)}</b>
       <label class="field">Tu guitarra está
         <select id="tbTuneSel"><option value="tab">afinada como la tab (${esc(tl.short)})</option><option value="std">en afinación estándar</option></select></label>
-      <span class="note">Los trastes son los mismos; la app ajusta qué notas espera escuchar y cómo suenan.</span></div>`}
+      <span class="note">Los trastes son los mismos; la app ajusta qué notas espera escuchar y cómo suenan.</span>
+      ${t.cuerdas === 6 ? `<button class="btn" id="tbTuneGo">Afinar así en el afinador</button>` : ""}</div>`}
     <div class="ms-block"><b>Movimiento de la tab</b><span class="note">Al escuchar y al tocar con tempo.</span>
       <div class="seg" role="radiogroup" aria-label="Movimiento de la tab"><button role="radio" data-mov="nota">Nota por nota</button><button role="radio" data-mov="continuo">Continuo</button></div>
       <span class="note" id="tbMovNote"></span></div>
@@ -657,6 +667,8 @@ function openSettings() {
   const ck = $("#tbClick", body), au = $("#tbAuto", body);
   ck.checked = data.ajustes.tabClick !== false; au.checked = data.ajustes.tabAuto !== false;
   ck.onchange = () => { data.ajustes.tabClick = ck.checked; save(); }; au.onchange = () => { data.ajustes.tabAuto = au.checked; save(); };
+  const tg = $("#tbTuneGo", body);
+  if (tg) tg.onclick = () => { closeSheet(); window.dispatchEvent(new CustomEvent("riff:go", { detail: { view: "afinador", opts: { afinacion: t.afin.slice().reverse() } } })); };
   const ts = $("#tbTuneSel", body);
   if (ts) { ts.value = p.afin === "std" ? "std" : "tab"; ts.onchange = () => { p.afin = ts.value; save(); }; }
   $("#tbMicSet", body).onclick = () => { closeSheet(); openMicSettings({ title: "Micrófono", rhythm: true }); };
@@ -849,6 +861,9 @@ function passDone() {
   const parts = [`<b>${Math.round(pct * 100)}%</b> bien a ${Math.round(v0 * 100)}% de velocidad`, `${c.ok} a tiempo`];
   if (c.meh) parts.push(`${c.meh} tarde, temprano o sin ataque claro`); if (c.wrong) parts.push(`${c.wrong} ${c.wrong === 1 ? "equivocada" : "equivocadas"}`); if (c.miss) parts.push(`${c.miss} sin tocar`);
   const msg = parts.join(" · ") + (note ? ". " + note : "");
+  if (worst && worst[1] >= 2) p.dificil = { a: +worst[0], b: +worst[0], titulo: t.titulo, t: Date.now(), por: "tempo", pct: Math.round(pct * 100) };
+  else if (pct >= .9 && p.dificil && p.dificil.a >= r.a && p.dificil.b <= r.b) delete p.dificil;
+  save();
   const worstBtn = worst && worst[1] >= 2 ? `<button class="btn small" id="tbFix" data-bar="${worst[0]}">Aprender el compás ${+worst[0] + 1}</button>` : "";
   $("#tbProg", el).innerHTML = `<div class="row between" style="gap:10px"><span>${msg}</span>${worstBtn}</div>`;
   const fix = $("#tbFix", el);

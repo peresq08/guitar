@@ -4,13 +4,37 @@ import * as A from "../audio.js";
 
 let root, loop = null, lock = -1, hist = [], okSince = 0;
 
+// Afinaciones (MIDI de la 6ª a la 1ª cuerda)
+export const TUNINGS = [
+  { id: "estandar", name: "Estándar", notes: [40, 45, 50, 55, 59, 64] },
+  { id: "mib", name: "Medio tono abajo (Mi bemol)", notes: [39, 44, 49, 54, 58, 63] },
+  { id: "re", name: "Un tono abajo (Re)", notes: [38, 43, 48, 53, 57, 62] },
+  { id: "dropd", name: "Drop D", notes: [38, 45, 50, 55, 59, 64] },
+  { id: "dropcs", name: "Drop C# (medio tono abajo y 6ª en Do#)", notes: [37, 44, 49, 54, 58, 63] },
+  { id: "dropc", name: "Drop C", notes: [36, 43, 48, 53, 57, 62] },
+  { id: "dadgad", name: "DADGAD", notes: [38, 45, 50, 55, 57, 62] },
+  { id: "openg", name: "Open G", notes: [38, 43, 50, 55, 59, 62] },
+  { id: "opend", name: "Open D", notes: [38, 45, 50, 54, 57, 62] },
+];
+const FLATS = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+const nameOf = (m, i) => { const n = FLATS[((m % 12) + 12) % 12]; return i === 5 && n === "E" ? "e" : n; };
+function tuning() {
+  const id = data.ajustes.afinacion || "estandar";
+  if (id === "tab" && Array.isArray(data.ajustes.afinacionTab) && data.ajustes.afinacionTab.length === 6) return { id: "tab", name: "La de tu tab", notes: data.ajustes.afinacionTab };
+  return TUNINGS.find(t => t.id === id) || TUNINGS[0];
+}
+const TUN = () => tuning().notes;
+
 export function mount(el) {
   root = el;
   el.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
   <div class="col">
   <div class="panel tuner screen">
-    <div class="label">Afinación estándar · E A D G B e</div>
+    <div class="row between" style="gap:10px;flex-wrap:wrap">
+      <select id="tTuning" aria-label="Afinación" style="flex:1 1 240px"></select>
+      <span class="label" id="tTuneNotes"></span>
+    </div>
     <svg viewBox="0 0 300 170" aria-hidden="true">
       <path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>
       <path id="tOk" d="M134.3 31 A120 120 0 0 1 165.7 31" fill="none" stroke="var(--good)" stroke-width="10" stroke-linecap="round" opacity=".35"/>
@@ -22,7 +46,7 @@ export function mount(el) {
     </svg>
     <div class="note-name" id="tNote">–</div>
     <div class="num muted" id="tInfo">Activa el micrófono y toca una cuerda</div>
-    <div class="strings" id="tStrings">${STD.map((m, i) => `<button data-s="${i}" aria-label="Cuerda ${6 - i}, ${STRING_NAMES[i]}">${STRING_NAMES[i]}</button>`).join("")}</div>
+    <div class="strings" id="tStrings"></div>
     <p class="note" id="tHint">Detecta la cuerda sola. Toca una cuerda de arriba para fijarla y escuchar su tono de referencia.</p>
     <button class="btn primary block" id="tStart" data-primary>Activar afinador</button>
   </div>
@@ -34,15 +58,39 @@ export function mount(el) {
     </div>
     <p class="note">Deja 440 Hz salvo que toques junto a una grabación afinada distinto.</p>
   </div>
+  <div class="panel">
+    <div class="label">Afinaciones de las canciones</div>
+    <p class="note">Muchas canciones de rock y metal de los 80 (Guns N' Roses, Van Halen, Mötley Crüe) y algunas de The Cure van medio tono abajo. Las de Tabs te dicen su afinación y te traen aquí con <b>Afinar así</b>. Si no quieres cambiar de afinación, en Tabs elige <i>Guitarra en afinación estándar</i>: los trastes son los mismos y la canción suena medio tono más aguda.</p>
+  </div>
   </div>
   </div>`;
   $("#tStart", el).onclick = start;
+  const sel = $("#tTuning", el);
+  sel.onchange = () => { data.ajustes.afinacion = sel.value; save(); lock = -1; paintTuning(); };
+  paintTuning();
   $("#tA4", el).onchange = e => { const v = Math.min(450, Math.max(430, +e.target.value || 440)); data.ajustes.a4 = v; save(); };
-  el.querySelectorAll("[data-s]").forEach(b => b.onclick = () => {
+}
+function paintTuning() {
+  const t = tuning(), sel = $("#tTuning", root);
+  sel.innerHTML = TUNINGS.map(x => `<option value="${x.id}">${x.name}</option>`).join("") + (Array.isArray(data.ajustes.afinacionTab) ? `<option value="tab">La de tu tab (${data.ajustes.afinacionTab.map(nameOf).join(" ")})</option>` : "");
+  sel.value = t.id;
+  $("#tTuneNotes", root).textContent = t.notes.map(nameOf).join(" ");
+  $("#tStrings", root).innerHTML = t.notes.map((m, i) => `<button data-s="${i}" aria-label="Cuerda ${6 - i}, ${nameOf(m, i)}">${nameOf(m, i)}</button>`).join("");
+  root.querySelectorAll("[data-s]").forEach(b => b.onclick = () => {
     const i = +b.dataset.s; lock = lock === i ? -1 : i;
-    if (lock >= 0) A.pluck(STD[i], 0, .4);
+    if (lock >= 0) A.pluck(TUN()[i], 0, .4);
     paintStrings(-1, false);
   });
+}
+// Abre el afinador con una afinación (desde Tabs): opts.afinacion = id o lista MIDI de 6ª a 1ª
+export function onShow(opts = {}) {
+  if (opts.afinacion) {
+    if (Array.isArray(opts.afinacion)) {
+      const hit = TUNINGS.find(t => t.notes.every((m, k) => m === opts.afinacion[k]));
+      if (hit) data.ajustes.afinacion = hit.id; else { data.ajustes.afinacionTab = opts.afinacion; data.ajustes.afinacion = "tab"; }
+    } else data.ajustes.afinacion = opts.afinacion;
+    save(); lock = -1; paintTuning();
+  }
 }
 async function start() {
   const btn = $("#tStart", root);
@@ -68,19 +116,20 @@ function tick() {
   const a4 = data.ajustes.a4, midi = 69 + 12 * Math.log2(f / a4);
   let target, cents;
   let s = lock;
-  if (s < 0) { let best = 99; STD.forEach((m, i) => { const d = Math.abs(midi - m); if (d < best) { best = d; s = i; } }); if (best > 3) s = -1; }
-  if (s >= 0) { target = STD[s]; cents = (midi - target) * 100; }
+  const T = TUN();
+  if (s < 0) { let best = 99; T.forEach((m, i) => { const d = Math.abs(midi - m); if (d < best) { best = d; s = i; } }); if (best > 3) s = -1; }
+  if (s >= 0) { target = T[s]; cents = (midi - target) * 100; }
   else { target = Math.round(midi); cents = (midi - target) * 100; }
   const pc = ((target % 12) + 12) % 12, oct = Math.floor(target / 12) - 1;
   const clamped = Math.max(-50, Math.min(50, cents));
   $("#tNeedle", root).setAttribute("transform", `rotate(${clamped * 1.5} 150 150)`);
   const inTune = Math.abs(cents) < 5;
-  $("#tNote", root).textContent = NOTES[pc] + oct;
+  $("#tNote", root).textContent = (tuning().id === "estandar" ? NOTES[pc] : FLATS[pc]) + oct;
   $("#tNote", root).style.color = inTune ? "var(--good)" : "var(--ink)";
   $("#tInfo", root).textContent = `${f.toFixed(1)} Hz · ${cents > 0 ? "+" : ""}${Math.round(cents)} cents · ${inTune ? "afinada" : cents < 0 ? "sube (aprieta)" : "baja (afloja)"}`;
   $("#tOk", root).setAttribute("opacity", inTune ? "1" : ".35");
   if (inTune) { if (!okSince) okSince = performance.now(); } else okSince = 0;
   paintStrings(s, inTune && performance.now() - okSince > 400);
-  $("#tHint", root).textContent = s >= 0 ? `Cuerda ${6 - s} · ${STRING_NAMES[s]} (${NOTES_ES[STD[s] % 12]})` : "Nota fuera de las cuerdas al aire";
+  $("#tHint", root).textContent = s >= 0 ? `Cuerda ${6 - s} · ${nameOf(T[s], s)} (${NOTES_ES[T[s] % 12]})` : "Nota fuera de las cuerdas al aire";
 }
 export function onHide() { /* el bucle se pausa solo cuando la vista está oculta */ }

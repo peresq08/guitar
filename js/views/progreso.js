@@ -1,12 +1,13 @@
 import { data, save, streak, bestStreak, dayKey, minutesOn, exportJSON, importJSON, toast, esc, applyLane, $ } from "../store.js";
 import { PATTERNS } from "./rasgueo.js";
+import { listRecordings, getRecording, deleteRecording, renameRecording, fmtDur, extOf } from "../recorder.js";
 const PATS = Object.fromEntries(PATTERNS.map(p => [p.id, p.nombre]));
 import { LEVELS, goalDone, toggleGoal, currentLevel, levelProgress, CATS, DIFF, difficulty } from "../plan.js";
 
 let root;
 const ESTADOS = { pendiente: "Por aprender", practicando: "Practicando", dominada: "Dominada" };
 
-export function mount(el) { root = el; applyTheme(); render(); }
+export function mount(el) { root = el; applyTheme(); render(); window.addEventListener("riff:recordings", () => { if (!root.hidden) paintRecs(); }); }
 export function refresh() { if (!root.hidden) render(); }
 export function onShow(opts = {}) {
   render();
@@ -73,6 +74,8 @@ function render() {
     </details>
   </div>
 
+  <div class="panel" id="recPanel"><div class="label">Tus grabaciones</div><p class="note">Cargando…</p></div>
+
   <div class="panel">
     <div class="label">Récords de cambios</div>
     ${recordsHTML()}
@@ -99,7 +102,7 @@ function render() {
   </div>
   </div>
   <p class="note" style="text-align:center">Riff · hecho a tu medida</p>`;
-  bind();
+  bind(); paintRecs();
 }
 
 let filt = "todas", catF = "todas", difF = "todas";
@@ -197,3 +200,55 @@ function bind() {
 }
 function getTheme() { try { return localStorage.getItem("riff-theme") || ""; } catch (e) { return ""; } }
 function applyTheme() { const t = getTheme(); if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
+
+
+/* ---------- Grabaciones ---------- */
+const urls = new Map();
+const fmtDate = t => new Date(t).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+async function paintRecs() {
+  const box = root && root.querySelector("#recPanel"); if (!box) return;
+  let recs = [];
+  try { recs = await listRecordings(); } catch (e) { box.innerHTML = `<div class="label">Tus grabaciones</div><p class="note">Este navegador no permite guardar grabaciones.</p>`; return; }
+  const total = recs.reduce((a, r) => a + (r.blob?.size || 0), 0);
+  box.innerHTML = `<div class="row between"><div class="label">Tus grabaciones</div>${recs.length ? `<span class="note">${recs.length} · ${total > 1048576 ? (total / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1024)) + " KB"}</span>` : ""}</div>
+    ${recs.length ? `<ul class="reclist">${recs.map(r => {
+      const first = recs.filter(x => x.label === r.label && x.t < r.t).pop();
+      return `<li data-id="${r.id}">
+        <div class="rec-top"><button class="rec-play" data-play="${r.id}" aria-label="Escuchar ${esc(r.label)}">▶</button>
+          <div class="rec-info"><b class="rec-name" title="Toca para cambiar el nombre">${esc(r.label)}</b><small>${fmtDate(r.t)} · ${fmtDur(r.dur)}</small></div>
+          <div class="rec-act">${first ? `<button class="btn small ghost" data-cmp="${r.id}" data-first="${first.id}" title="Escucha la primera vez que grabaste esta práctica y la de ahora">Comparar con la primera</button>` : ""}<button class="icon-btn" data-dl="${r.id}" aria-label="Descargar">⬇</button><button class="icon-btn" data-rdel="${r.id}" aria-label="Borrar">✕</button></div></div>
+        <div class="rec-players"></div></li>`;
+    }).join("")}</ul>` : `<p class="note">Graba tu práctica con el botón <b>Grabar</b> de Practicar (o la tecla R). Escucharte es la forma más rápida de notar cuerdas que zumban, cambios que cortan el sonido y tiempos que se adelantan.</p>`}`;
+  // Las grabaciones WebM no traen la duración: se calcula una vez para que la barra de avance funcione
+  const fixDur = root => root.querySelectorAll("audio").forEach(a => a.addEventListener("loadedmetadata", () => {
+    if (a.duration !== Infinity) return;
+    const back = () => { a.removeEventListener("timeupdate", back); a.currentTime = 0; };
+    a.addEventListener("timeupdate", back); a.currentTime = 1e101;
+  }, { once: true }));
+  const urlOf = async id => { if (!urls.has(id)) { const r = await getRecording(id); urls.set(id, URL.createObjectURL(r.blob)); } return urls.get(id); };
+  const player = (src, label) => `<div class="rec-player"><span class="note">${esc(label)}</span><audio controls src="${src}"></audio></div>`;
+  box.querySelectorAll("[data-play]").forEach(b => b.onclick = async () => {
+    const li = b.closest("li"), pl = li.querySelector(".rec-players");
+    if (pl.innerHTML) { pl.innerHTML = ""; b.textContent = "▶"; return; }
+    pl.innerHTML = player(await urlOf(b.dataset.play), ""); b.textContent = "■"; fixDur(pl); setTimeout(() => pl.querySelector("audio").play().catch(() => {}), 150);
+  });
+  box.querySelectorAll("[data-cmp]").forEach(b => b.onclick = async () => {
+    const li = b.closest("li"), pl = li.querySelector(".rec-players"), f = recs.find(x => x.id === b.dataset.first), r = recs.find(x => x.id === b.dataset.cmp);
+    pl.innerHTML = `<div class="rec-cmp">${player(await urlOf(f.id), "Antes · " + fmtDate(f.t))}${player(await urlOf(r.id), "Ahora · " + fmtDate(r.t))}</div>`; fixDur(pl);
+  });
+  box.querySelectorAll("[data-dl]").forEach(b => b.onclick = async () => {
+    const r = recs.find(x => x.id === b.dataset.dl), a = document.createElement("a");
+    a.href = await urlOf(r.id); a.download = `Riff ${r.label.replace(/[\\/:*?"<>|]/g, "-")} ${new Date(r.t).toISOString().slice(0, 16).replace("T", " ").replace(":", "h")}.${extOf(r.mime)}`; a.click();
+  });
+  box.querySelectorAll("[data-rdel]").forEach(b => { let armed = false; b.onclick = async () => {
+    if (!armed) { armed = true; b.textContent = "¿Sí?"; b.style.width = "auto"; b.style.padding = "0 10px"; setTimeout(() => { armed = false; b.textContent = "✕"; b.style.width = ""; b.style.padding = ""; }, 3000); return; }
+    await deleteRecording(b.dataset.rdel); paintRecs();
+  }; });
+  box.querySelectorAll(".rec-name").forEach(n => n.onclick = () => {
+    const li = n.closest("li"), inp = document.createElement("input"); inp.type = "text"; inp.value = n.textContent; inp.className = "rec-rename"; inp.maxLength = 80;
+    n.replaceWith(inp); inp.focus(); inp.select();
+    const done = async ok => { if (ok && inp.value.trim()) await renameRecording(li.dataset.id, inp.value.trim()); paintRecs(); };
+    inp.onkeydown = e => { if (e.key === "Enter") done(true); if (e.key === "Escape") done(false); };
+    inp.onblur = () => done(true);
+  });
+}

@@ -43,7 +43,7 @@ function render() {
   <div class="col">
   <div class="panel screen">
     <div class="row between">
-      <div><div class="label">Rutina de hoy</div><h2>${R.finished ? "Rutina terminada" : esc(b.n)}</h2></div>
+      <div><div class="label">Rutina de hoy</div><h2>${R.finished ? "Rutina terminada" : esc(b.n)}</h2>${!R.finished && b.weak ? `<span class="chip acc" title="Este bloque sale de lo que más te ha costado en tus prácticas">Según tus datos</span>` : ""}</div>
       <div class="big" id="hBig">${fmt(Math.ceil(R.left))}</div>
     </div>
     ${R.finished ? "" : `
@@ -52,7 +52,7 @@ function render() {
       ${b.song ? `<div class="song"><div class="label">Canción del día</div><h3>${esc(b.song.titulo)}</h3><span class="muted">${esc(b.song.artista)}${b.song.anio ? ` · ${b.song.anio}` : ""}${b.song.bpmMeta ? ` · original ≈ ${b.song.bpmMeta} BPM` : ""}</span><p>${esc(b.song.tip || b.song.notas || "Tócala junto a la grabación. Si una parte cuesta, aíslala y repítela lento.")}</p>
         <div class="row"><a class="btn small" href="https://www.songsterr.com/?pattern=${encodeURIComponent(b.song.titulo + " " + b.song.artista)}" target="_blank" rel="noopener">Ver tablatura</a>${seqFor(b.song) ? `<button class="btn small primary" id="hSeq">Practicar sus acordes</button>` : ""}${b.song.rasgueo ? `<button class="btn small" id="hStrum">Su rasgueo</button>` : ""}</div></div>` : `<p>${esc(b.tip)}</p>`}
       ${b.chords ? `<div class="chords">${b.chords.map(c => diagram(c)).join("")}</div>` : ""}
-      ${b.tool ? `<button class="btn small" id="hTool" style="align-self:flex-start">${{ cambios: "Abrir reto de cambios", metro: "Abrir metrónomo", jam: "Abrir Jam", rasgueo: "Abrir entrenador de rasgueo" }[b.tool]}</button>` : ""}
+      ${b.tool ? `<button class="btn small" id="hTool" style="align-self:flex-start">${{ cambios: "Abrir reto de cambios", metro: "Abrir metrónomo", jam: "Abrir Jam", rasgueo: "Abrir entrenador de rasgueo", tabs: "Abrir la tab en ese compás" }[b.tool]}</button>` : ""}
     </div>`}
     <div class="row">
       ${R.finished ? "" : `<button class="btn primary" id="hStart" data-primary>${R.run ? "Pausa" : (R.practiced > 0 ? "Continuar" : "Empezar")}</button><button class="btn" id="hSkip">Siguiente</button>`}
@@ -105,7 +105,7 @@ function bind() {
   const b = R.blocks[R.i];
   $("#hStrum", root)?.addEventListener("click", () => goTo("practicar", { tab: "rasgueo", pattern: b.song.rasgueo }));
   $("#hSeq", root)?.addEventListener("click", () => goTo("practicar", { tab: "secuencia", seq: seqFor(b.song).id }));
-  $("#hTool", root)?.addEventListener("click", () => goTo("practicar", { tab: b.tool, pair: b.pair, mode: b.mode, pattern: b.pattern }));
+  $("#hTool", root)?.addEventListener("click", () => goTo("practicar", { tab: b.tool, pair: b.pair, mode: b.mode, pattern: b.pattern, tabId: b.tabId, tabSel: b.tabSel, tabMode: b.tabMode }));
   $("#hStart", root)?.addEventListener("click", () => {
     ctx();
     if (R.run) { R.run = false; clearInterval(R.tick); keepAwake(false); }

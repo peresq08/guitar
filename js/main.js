@@ -1,6 +1,8 @@
 import { data, onChange, streak, practiceDays, dayKey, applyLane, $, $$ } from "./store.js";
 import { currentLevel, ensureSongs } from "./plan.js";
 import * as A from "./audio.js";
+import { startRecording, stopRecording, isRecording, onRecState, fmtDur } from "./recorder.js";
+import { recLabel } from "./views/practicar.js";
 import * as hoy from "./views/hoy.js";
 import * as practicar from "./views/practicar.js";
 import * as afinador from "./views/afinador.js";
@@ -47,6 +49,12 @@ function setFocus(on) {
   } catch (e) {}
   window.scrollTo({ top: 0 });
 }
+$$("[data-rec]").forEach(b => b.onclick = () => isRecording() ? stopRecording() : startRecording(recLabel()));
+onRecState(st => $$("[data-rec]").forEach(b => {
+  b.classList.toggle("on", st.on);
+  b.querySelector(".rec-l").textContent = st.on ? `${fmtDur(st.secs)} · Detener` : "Grabar";
+  b.title = st.on ? `Grabando: ${st.label}` : "Grabar lo que tocas para escucharte después";
+}));
 $("#navToggle").onclick = () => setNavMini(!root.classList.contains("nav-mini"));
 $("#tgSide").onclick = () => setSideHidden(!root.classList.contains("side-hidden"));
 $("#tgFocus").onclick = () => setFocus(true);
@@ -61,6 +69,7 @@ document.addEventListener("keydown", e => {
   if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || t?.isContentEditable) return;
   const order = ["hoy", "practicar", "afinador", "acordes", "progreso"];
   if (/^[1-5]$/.test(e.key)) { go(order[+e.key - 1]); e.preventDefault(); return; }
+  if ((e.key === "r" || e.key === "R") && current === "practicar") { isRecording() ? stopRecording() : startRecording(recLabel()); e.preventDefault(); return; }
   if ((e.key === "f" || e.key === "F") && current === "practicar") { setFocus(!root.classList.contains("focus")); e.preventDefault(); return; }
   if (e.key === "Escape" && root.classList.contains("focus") && !document.querySelector(".sheet-wrap")) { setFocus(false); return; }
   if (e.code === "Space" && !(tag === "BUTTON" || tag === "A" || tag === "SUMMARY")) {

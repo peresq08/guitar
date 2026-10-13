@@ -6,11 +6,11 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 
 | Sección | Para qué sirve |
 |---|---|
-| **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel y el tiempo que tengas. |
-| **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, tabs y riffs nota por nota, metrónomo progresivo y Jam con batería y bajo. |
-| **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
-| **Acordes** | 44 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 119 canciones ordenado por categoría (pop y rock de los 80, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords y respaldo de datos. |
+| **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel, el tiempo que tengas y lo que más te cuesta. |
+| **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, tabs y riffs nota por nota, notas en el mástil, metrónomo progresivo y Jam con batería y bajo para improvisar. Puedes grabarte en cualquier momento. |
+| **Afinador** | Afinador cromático por micrófono con detección automática de cuerda, en afinación estándar, medio tono abajo, un tono abajo, Drop D, Drop C#, Drop C, DADGAD, Open G, Open D o la de tu tab. |
+| **Acordes** | 50 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
+| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 144 canciones ordenado por categoría (pop y rock de los 80, rock suave de los 70, pop y rock de los 90, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords, tus grabaciones y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 
@@ -116,6 +116,26 @@ En la computadora, dentro de Practicar:
 - En **Cambios** y **Secuencias**, la pantalla completa agrega abajo un **panel grande del acorde**: diagrama con los dedos en colores, una mano que muestra qué dedo va dónde (índice, medio, anular, meñique) con su cuerda y traste, el acorde que sigue y qué dedos se quedan fijos o se deslizan en el cambio.
 - **Panel**: oculta la columna de la derecha (lista de tabs, editor, estadísticas) para que la práctica use todo el ancho. Se recuerda.
 - **Contraer** (abajo en el menú lateral): deja el menú solo con íconos.
+
+## Rutina según tus puntos débiles
+
+La rutina de Hoy agrega hasta dos bloques marcados *Según tus datos*:
+
+- **Tu cambio más difícil:** el par de acordes con menos cambios limpios en tus secuencias. Abre el reto de cambios con ese par.
+- **Compás difícil:** el compás de una tab donde más te tardaste en Aprender o más fallaste Con tempo. Abre la tab en ese compás.
+- **Ritmo pendiente:** el patrón de rasgueo cuya última ronda no salió pareja, con el consejo que te dio la app.
+
+## Grabarte
+
+Con el botón **Grabar** (arriba a la derecha en Practicar, o la tecla **R**) la app graba lo que tocas con el micrófono. Cada grabación se guarda en este dispositivo con el nombre de lo que practicabas (por ejemplo, *Secuencias · Don't Stop Believin' · estrofa*). En **Progreso → Tus grabaciones** las escuchas, les cambias el nombre, las descargas o las borras. Si grabaste la misma práctica antes, **Comparar con la primera** pone las dos juntas para que oigas cuánto mejoraste. Se guardan las últimas 60.
+
+## Notas en el mástil
+
+En **Practicar → Mástil** la app te pide una nota en una cuerda ("La en la 5ª cuerda") y la comprueba por el micrófono; al encontrarla te muestra dónde estaba. Eliges las cuerdas, los trastes (0–5, 0–7 o 0–12) y si solo naturales. Guarda tu récord de notas por minuto y las notas que más te cuestan, que salen más seguido. Sin micrófono, te revisas con *Ver dónde está*.
+
+## Improvisar en el Jam
+
+El Jam tiene nueve estilos (rock, balada, blues, hard rock, galope, pop ochentero en Re, country en Sol, rock en español en La menor y balada en La menor) con su escala: pentatónica menor o mayor, blues o menor natural. Puedes ver todo el mástil o una **caja** a la vez. Con **Escuchar lo que toco** (mejor con audífonos), cada nota que tocas se marca en el diapasón: verde si es del acorde que suena, azul si está en la escala y rojo si queda fuera, con el porcentaje de tus notas en la escala.
 
 ## Carril más grande
 

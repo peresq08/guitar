@@ -19,11 +19,13 @@
 <header class="top">
   <div class="brand"><span class="logo"><svg class="pick" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c-1.2 0-6.5-8.6-7.6-13.2C3.6 5.4 7.3 2.5 12 2.5s8.4 2.9 7.6 6.3C18.5 13.4 13.2 22 12 22z"/></svg>Riff</span><span class="lvl" id="topLevel"></span></div>
   <div class="viewtools" id="viewTools" hidden>
+    <button class="vt rec" data-rec title="Grabar lo que tocas para escucharte después"><i class="recdot" aria-hidden="true"></i><span class="rec-l">Grabar</span></button>
     <button class="vt" id="tgSide" aria-pressed="false" title="Ocultar o mostrar el panel de la derecha"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg><span>Panel</span></button>
     <button class="vt" id="tgFocus" title="Pantalla completa: solo lo que necesitas mientras tocas (tecla F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Pantalla completa</span></button>
   </div>
   <div class="streak" id="topStreak"></div>
 </header>
+<button class="vt rec rec-float" data-rec title="Grabar lo que tocas para escucharte después"><i class="recdot" aria-hidden="true"></i><span class="rec-l">Grabar</span></button>
 <button class="focus-exit" id="focusExit" hidden title="Salir de pantalla completa (Esc o F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>Salir</button>
 
 <main id="app">
@@ -40,7 +42,7 @@
   <button data-view="afinador"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 18l4-7"/></svg>Afinador</button>
   <button data-view="acordes"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M5 8h14M5 13h14M10 3v18M14 3v18"/></svg>Acordes</button>
   <button data-view="progreso"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progreso</button>
-  <div class="kbd-hint" aria-hidden="true"><b>Atajos</b><span><kbd>Espacio</kbd> iniciar o pausar</span><span><kbd>1</kbd>–<kbd>5</kbd> cambiar de sección</span><span><kbd>F</kbd> pantalla completa</span></div>
+  <div class="kbd-hint" aria-hidden="true"><b>Atajos</b><span><kbd>Espacio</kbd> iniciar o pausar</span><span><kbd>1</kbd>–<kbd>5</kbd> cambiar de sección</span><span><kbd>F</kbd> pantalla completa</span><span><kbd>R</kbd> grabar</span></div>
   <button class="navtoggle" id="navToggle" aria-label="Contraer el menú" title="Contraer el menú"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Contraer</span></button>
 </nav>
 
