@@ -7,7 +7,7 @@ const NOW_FRAC = .6;
 export class Highway {
   // Acordes: 10 s adelante y 30 s atrás. Golpes de rasgueo: ventana corta para que no se encimen.
   constructor(container, { mode = "chords", past = mode === "hits" ? 4 : 30, future = mode === "hits" ? 2 : 10 } = {}) {
-    this.mode = mode; this.past = past; this.future = future; this.items = []; this.heardSegs = []; this.ticks = []; this.clock = null; this.raf = 0;
+    this.mode = mode; this.past = past; this.future = future; this.baseFuture = future; this.items = []; this.heardSegs = []; this.ticks = []; this.clock = null; this.raf = 0;
     this.wrap = document.createElement("div"); this.wrap.className = "hwy";
     this.canvas = document.createElement("canvas"); this.canvas.setAttribute("role", "img");
     this.canvas.setAttribute("aria-label", "Carril: lo que viene a la derecha, lo que tocaste a la izquierda");
@@ -15,13 +15,14 @@ export class Highway {
     this.colors = null; this.colorsAt = 0;
     new ResizeObserver(() => this.draw()).observe(this.wrap);
   }
-  reset() { this.items = []; this.heardSegs = []; this.ticks = []; this.draw(); }
+  reset() { this.items = []; this.heardSegs = []; this.ticks = []; this.strums = []; this.draw(); }
+  // Golpes de rasgueo que se dibujan dentro de los bloques de acordes
+  setStrums(list) { this.strums = list || []; this.future = this.strums.length && this.mode === "chords" ? 7 : this.baseFuture; }
   add(item) { this.items.push(item); return item; }
   addMany(list) { list.forEach(i => this.items.push(i)); }
   // Reemplaza lo proyectado a futuro (por ejemplo cuando cambia el tempo)
   replaceFuture(list, fromT) { this.items = this.items.filter(i => (i.t ?? i.t0) < fromT || i.fixed); this.addMany(list); }
   get(id) { return this.items.find(i => i.id === id); }
-  mark(id, status) { const i = this.get(id); if (i) i.status = status; }
   heard(t0, t1, label, ok) {
     const last = this.heardSegs[this.heardSegs.length - 1];
     if (last && last.label === label && last.ok === ok && t0 - last.t1 < .2) last.t1 = t1;
@@ -30,19 +31,22 @@ export class Highway {
   }
   tick(t, status) { this.ticks.push({ t, status }); if (this.ticks.length > 800) this.ticks.splice(0, 300); }
   // Vista previa en reposo: muestra lo que viene como si la ronda empezara en un segundo
-  preview(list) { this.stop(); this.items = []; this.heardSegs = []; this.ticks = []; this.addMany(list); this.clock = () => 0; this.draw(); }
+  preview(list, strums) { this.stop(); this.items = []; this.heardSegs = []; this.ticks = []; this.setStrums(strums); this.addMany(list); this.clock = () => 0; this.draw(); }
   run(clock) { this.clock = clock; cancelAnimationFrame(this.raf); const loop = () => { this.draw(); this.raf = requestAnimationFrame(loop); }; loop(); }
   stop() { cancelAnimationFrame(this.raf); this.raf = 0; this.draw(); }
 
   palette() {
     const now = performance.now();
     if (!this.colors || now - this.colorsAt > 1000) {
-      const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+      const cs = getComputedStyle(this.wrap), v = n => cs.getPropertyValue(n).trim();
       this.colors = { ink: v("--ink"), muted: v("--muted"), line: v("--line"), panel: v("--panel"), panel2: v("--panel2"), accent: v("--accent"), accentInk: v("--accent-ink"), good: v("--good"), warn: v("--warn"), bad: v("--led"), soft: v("--soft") };
       this.colorsAt = now;
     }
     return this.colors;
   }
+  // Destello en la línea de "ahora" cuando algo sale bien (o mal)
+  burst(kind) { (this.bursts = this.bursts || []).push({ at: performance.now(), kind }); if (this.bursts.length > 12) this.bursts.shift(); }
+  mark(id, status) { const i = this.get(id); if (i) { i.status = status; if (this.raf) this.burst(status); } }
   draw() {
     const c = this.canvas, w = this.wrap.clientWidth, h = this.wrap.clientHeight;
     if (!w || !h) return;
@@ -52,63 +56,115 @@ export class Highway {
     const C = this.palette(), now = this.clock ? this.clock() : 0, nx = Math.round(w * NOW_FRAC);
     const PAST = this.past, FUTURE = this.future;
     const X = t => t <= now ? nx - (now - t) / PAST * nx : nx + (t - now) / FUTURE * (w - nx);
-    const laneA = { y: 18, h: h - 18 - 26 }, laneB = { y: h - 20, h: 14 };
-    g.font = "600 10px Barlow, system-ui, sans-serif"; g.textBaseline = "middle";
-    // Fondo del futuro y textos guía
-    g.fillStyle = C.panel2; g.fillRect(nx, 0, w - nx, h);
-    g.fillStyle = C.muted; g.textAlign = "left"; g.fillText("LO QUE TOCASTE", 8, 9);
-    g.textAlign = "right"; g.fillText("LO QUE VIENE", w - 8, 9);
-    // Marcas de segundos
+    const laneA = { y: 20, h: h - 20 - 28 }, laneB = { y: h - 21, h: 13 };
+    const DISPLAY = '"Big Shoulders Display", "Barlow Condensed", system-ui, sans-serif';
+    // Fondo: pasado apagado a la izquierda, futuro con un leve brillo hacia la línea
+    let bg = g.createLinearGradient(0, 0, w, 0);
+    bg.addColorStop(0, "rgba(255,255,255,0)"); bg.addColorStop(NOW_FRAC, "rgba(255,255,255,.025)"); bg.addColorStop(1, "rgba(242,163,58,.05)");
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.font = `600 10.5px Barlow, system-ui, sans-serif`; g.textBaseline = "middle";
+    g.fillStyle = C.muted; g.textAlign = "left"; g.fillText("Lo que tocaste", 10, 10);
+    g.textAlign = "right"; g.fillText("Lo que viene", w - 10, 10);
+    // Marcas de tiempo
     g.strokeStyle = C.line; g.lineWidth = 1;
     const step = this.mode === "hits" ? 1 : 5;
     for (let s = Math.ceil(now - PAST); s <= now + FUTURE; s += (s < now ? step : 1)) {
       const x = Math.round(X(s)) + .5; if (x < 0 || x > w) continue;
-      g.beginPath(); g.moveTo(x, laneA.y + laneA.h + 2); g.lineTo(x, laneA.y + laneA.h + 5); g.stroke();
+      g.beginPath(); g.moveTo(x, laneA.y + laneA.h + 3); g.lineTo(x, laneA.y + laneA.h + 6); g.stroke();
     }
     const colorOf = st => st === "ok" ? C.good : st === "wrong" ? C.bad : st === "miss" ? C.muted : st === "meh" || st === "early" || st === "late" ? C.warn : null;
+    // Atenuación del pasado lejano
+    const fade = x => x >= nx ? 1 : .35 + .65 * Math.max(0, x / nx);
     if (this.mode === "chords") {
       for (const it of this.items) {
         const x0 = X(it.t0), x1 = X(it.t1); if (x1 < 0 || x0 > w) continue;
         const past = it.t1 <= now, cur = it.t0 <= now && it.t1 > now, col = colorOf(it.status);
-        const x = Math.max(0, x0) + 1.5, ww = Math.min(w, x1) - x - 1.5; if (ww <= 0) continue;
-        roundRect(g, x, laneA.y, ww, laneA.h, 6);
-        if (col) { g.fillStyle = col; g.globalAlpha = it.status === "miss" ? .35 : .85; g.fill(); g.globalAlpha = 1; }
-        else { g.fillStyle = cur ? C.soft : past ? C.panel2 : C.panel; g.fill(); }
-        g.lineWidth = cur ? 2 : 1; g.strokeStyle = cur ? C.accent : C.line; g.stroke();
-        if (ww > 18) {
-          g.fillStyle = col && it.status !== "miss" ? "#fff" : C.ink; g.textAlign = "center";
-          g.font = `700 ${past ? 12 : 16}px "Barlow Condensed", system-ui, sans-serif`;
-          g.fillText(it.label, x + ww / 2, laneA.y + laneA.h / 2, ww - 4);
+        const x = Math.max(0, x0) + 2, ww = Math.min(w, x1) - x - 2; if (ww <= 0) continue;
+        g.globalAlpha = fade(x + ww);
+        roundRect(g, x, laneA.y, ww, laneA.h, 8);
+        if (col) {
+          const gr = g.createLinearGradient(0, laneA.y, 0, laneA.y + laneA.h);
+          gr.addColorStop(0, col); gr.addColorStop(1, shade(col, -.35));
+          g.fillStyle = gr; if (it.status === "miss") g.globalAlpha *= .45; g.fill();
+          if (it.status === "ok" && x1 > nx - 60) { g.shadowColor = col; g.shadowBlur = 14; g.fill(); g.shadowBlur = 0; }
+        } else {
+          g.fillStyle = cur ? "rgba(242,163,58,.16)" : past ? "rgba(255,255,255,.04)" : "rgba(255,255,255,.07)"; g.fill();
         }
+        g.lineWidth = cur ? 2 : 1; g.strokeStyle = cur ? C.accent : col ? "rgba(255,255,255,.12)" : C.line;
+        if (cur) { g.shadowColor = C.accent; g.shadowBlur = 16; }
+        g.stroke(); g.shadowBlur = 0;
+        // brillo superior
+        g.fillStyle = "rgba(255,255,255,.06)"; roundRect(g, x + 1, laneA.y + 1, Math.max(0, ww - 2), 6, 6); g.fill();
+        if (ww > 18) {
+          g.fillStyle = col && it.status !== "miss" ? "#fff" : cur ? "#fff" : C.ink; g.textAlign = "center";
+          const fs = past ? 14 : cur ? 22 : 20, hasStrums = this.strums && this.strums.length;
+          g.font = `800 ${fs}px ${DISPLAY}`;
+          g.fillText(it.label, x + ww / 2, laneA.y + (hasStrums ? laneA.h * .36 : laneA.h / 2) + 1, ww - 6);
+        }
+        g.globalAlpha = 1;
+      }
+      // Rasgueo: flechas pequeñas en la parte baja de los bloques
+      if (this.strums && this.strums.length) {
+        const ys = laneA.y + laneA.h - 11;
+        g.textAlign = "center";
+        for (const st of this.strums) {
+          const x = X(st.t); if (x < 4 || x > w - 4) continue;
+          const past = st.t <= now, near = Math.abs(st.t - now) < .09;
+          g.globalAlpha = past ? .45 * fade(x) : 1;
+          g.fillStyle = near ? C.accent : st.sym === "✕" ? C.warn : st.acc ? "#fff" : "rgba(255,255,255,.75)";
+          g.font = `${st.acc ? 800 : 600} ${st.acc ? 13 : 11}px system-ui, sans-serif`;
+          g.fillText(st.sym, x, ys);
+        }
+        g.globalAlpha = 1;
       }
     } else {
-      // Golpes: ↓ ↑ ✕ como fichas
       const yc = laneA.y + laneA.h / 2;
       for (const it of this.items) {
-        const x = X(it.t); if (x < -10 || x > w + 10) continue;
-        const col = colorOf(it.status), r = it.acc ? 8.5 : 7, past = it.t <= now;
+        const x = X(it.t); if (x < -12 || x > w + 12) continue;
+        const col = colorOf(it.status), r = it.acc ? 9 : 7.5, past = it.t <= now;
+        g.globalAlpha = fade(x);
         g.beginPath(); g.arc(x, yc, r, 0, Math.PI * 2);
-        g.fillStyle = col || (past ? C.panel2 : C.panel); g.fill();
-        g.lineWidth = 1.5; g.strokeStyle = col || (it.acc ? C.accent : C.muted); g.stroke();
+        if (col) { g.fillStyle = col; g.shadowColor = col; g.shadowBlur = it.status === "ok" ? 10 : 0; }
+        else g.fillStyle = past ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.1)";
+        g.fill(); g.shadowBlur = 0;
+        g.lineWidth = 1.5; g.strokeStyle = col ? "rgba(255,255,255,.25)" : it.acc ? C.accent : "rgba(255,255,255,.3)"; g.stroke();
         g.fillStyle = col ? "#fff" : it.sym === "✕" ? C.warn : C.ink; g.textAlign = "center";
         g.font = `700 ${it.sym === "✕" ? 10 : 12}px system-ui, sans-serif`; g.fillText(it.sym, x, yc + .5);
+        g.globalAlpha = 1;
       }
     }
     // Lo que se escuchó
-    g.fillStyle = C.panel2; roundRect(g, 0, laneB.y, nx, laneB.h, 4); g.fill();
+    g.fillStyle = "rgba(255,255,255,.04)"; roundRect(g, 4, laneB.y, nx - 4, laneB.h, 5); g.fill();
     for (const s of this.heardSegs) {
-      const x0 = Math.max(0, X(s.t0)), x1 = Math.min(nx, X(Math.min(s.t1, now))); if (x1 <= 0 || x1 - x0 < 1) continue;
-      g.fillStyle = s.ok ? C.good : C.bad; g.globalAlpha = .75; g.fillRect(x0, laneB.y + 2, x1 - x0, laneB.h - 4); g.globalAlpha = 1;
-      if (x1 - x0 > 26) { g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "700 9px Barlow, system-ui, sans-serif"; g.fillText(s.label, (x0 + x1) / 2, laneB.y + laneB.h / 2 + .5, x1 - x0 - 4); }
+      const x0 = Math.max(4, X(s.t0)), x1 = Math.min(nx, X(Math.min(s.t1, now))); if (x1 <= 4 || x1 - x0 < 1) continue;
+      g.globalAlpha = .85 * fade(x1); g.fillStyle = s.ok ? C.good : C.bad; g.fillRect(x0, laneB.y + 3, x1 - x0, laneB.h - 6); g.globalAlpha = 1;
+      if (x1 - x0 > 26) { g.fillStyle = "#fff"; g.textAlign = "center"; g.font = "700 9.5px Barlow, system-ui, sans-serif"; g.fillText(s.label, (x0 + x1) / 2, laneB.y + laneB.h / 2 + .5, x1 - x0 - 4); }
     }
     for (const k of this.ticks) {
-      const x = X(k.t - (this.tickOffset || 0)); if (x < 0 || x > nx) continue;
-      g.fillStyle = k.status === "extra" ? C.bad : C.ink; g.fillRect(Math.round(x) - 1, laneB.y + 1, 2, laneB.h - 2);
+      const x = X(k.t - (this.tickOffset || 0)); if (x < 4 || x > nx) continue;
+      g.globalAlpha = fade(x); g.fillStyle = k.status === "extra" ? C.bad : "rgba(255,255,255,.75)"; g.fillRect(Math.round(x) - 1, laneB.y + 2, 2, laneB.h - 4); g.globalAlpha = 1;
     }
-    // Línea de "ahora"
-    g.fillStyle = C.accent; g.fillRect(nx - 1.5, 12, 3, h - 12);
-    g.beginPath(); g.moveTo(nx - 6, 12); g.lineTo(nx + 6, 12); g.lineTo(nx, 19); g.closePath(); g.fill();
+    // Línea de "ahora" con brillo
+    const glow = g.createLinearGradient(nx - 26, 0, nx + 26, 0);
+    glow.addColorStop(0, "rgba(242,163,58,0)"); glow.addColorStop(.5, "rgba(242,163,58,.18)"); glow.addColorStop(1, "rgba(242,163,58,0)");
+    g.fillStyle = glow; g.fillRect(nx - 26, 14, 52, h - 14);
+    g.shadowColor = C.accent; g.shadowBlur = 12; g.fillStyle = C.accent; g.fillRect(nx - 1.5, 14, 3, h - 14); g.shadowBlur = 0;
+    g.beginPath(); g.moveTo(nx - 6, 14); g.lineTo(nx + 6, 14); g.lineTo(nx, 21); g.closePath(); g.fill();
+    // Destellos
+    const tnow = performance.now();
+    (this.bursts || []).forEach(b => {
+      const p = (tnow - b.at) / 450; if (p > 1) return;
+      const col = b.kind === "ok" ? C.good : b.kind === "wrong" ? C.bad : b.kind === "miss" ? C.muted : C.warn;
+      g.globalAlpha = 1 - p; g.strokeStyle = col; g.lineWidth = 3 * (1 - p) + .5;
+      g.beginPath(); g.arc(nx, laneA.y + laneA.h / 2, 8 + p * 30, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+    });
   }
+}
+// Oscurece (k<0) o aclara (k>0) un color #rrggbb
+function shade(hex, k) {
+  const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim()); if (!m) return hex;
+  const f = v => Math.max(0, Math.min(255, Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k)));
+  return `rgb(${f(parseInt(m[1], 16))},${f(parseInt(m[2], 16))},${f(parseInt(m[3], 16))})`;
 }
 function roundRect(g, x, y, w, h, r) {
   r = Math.min(r, w / 2, h / 2);
@@ -172,4 +228,10 @@ export class ChordJudge {
   }
   finish(s, status) { s.done = true; s.status = status; this.onResult?.(s, status); }
   flush(tEnd) { this.segs.forEach(s => { if (!s.done && s.t0 < tEnd - .3) this.frame(s.t1 + .2, null); }); }
+}
+
+// Cambia el texto de un elemento con una entrada breve (para el acorde actual)
+export function swapText(el, text) {
+  if (!el || el.textContent === String(text)) return;
+  el.textContent = text; el.classList.remove("swap"); void el.offsetWidth; el.classList.add("swap");
 }

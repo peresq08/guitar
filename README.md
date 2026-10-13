@@ -26,6 +26,21 @@ En el celular abre esa dirección y usa **Agregar a pantalla de inicio**.
 
 En pantallas anchas el menú pasa a un costado y cada sección usa dos columnas. En Practicar, todo lo que se usa durante una ronda (acorde actual y siguiente, carril, tempo y botón) cabe en una pantalla, sin desplazarse. Atajos: **Espacio** inicia o pausa lo principal de la sección (rutina, reto, metrónomo, Jam, afinador) y **1–5** cambian de sección.
 
+## Diseño
+
+Las pantallas donde practicas (rutina, Cambios, Secuencias, Rasgueo, afinador, metrónomo y Jam) se ven como la pantalla de un instrumento: oscuras, con brillo ámbar, igual en tema claro y oscuro. Lo demás (listas, editor, ajustes) queda sobrio para no distraer.
+
+## Rondas más largas
+
+Cambios y Secuencias ofrecen rondas de 1, 2, 3, 5 o 10 minutos; Rasgueo, de 8 o 16 compases, de 1 a 5 minutos o sin fin. En Cambios, el récord se guarda por minuto para que las rondas de distinta duración se puedan comparar.
+
+## Calibración
+
+- **Acordes** (Cambios y Secuencias → *Calibrar acordes*): rasgueas cada acorde 4 segundos y la app aprende cómo suena con tu guitarra. Avisa si el resultado se parece más a otro acorde, por si tocaste el equivocado.
+- **Ritmo** (Rasgueo → *Calibrar ritmo*): tocas 8 golpes con el clic y la app mide el retraso de tu micrófono, que después usa para calificar el rasgueo con exactitud desde el primer golpe.
+
+Todo se guarda en el dispositivo, aparece en Progreso → Ajustes (donde puedes borrarlo) y viaja en el respaldo.
+
 ## Carril y reacción en vivo
 
 Con el micrófono activado (viene así por defecto), Cambios, Secuencias y Rasgueo muestran un carril estilo Guitar Hero:
@@ -54,6 +69,7 @@ En **Practicar → Secuencias** armas la progresión de una canción (por ejempl
 - Escribe la secuencia de una vez: `G:2 C:2 D:4` cambia los tiempos y `A7 x4` repite.
 - Puedes ligarla a una canción del repertorio; aparece un botón para practicarla desde Progreso y desde la canción del día.
 - El tempo sube o baja solo con las mismas reglas del entrenador de cambios.
+- **Rasgueo en la secuencia:** elige un patrón (por defecto, el sugerido de la canción) y sus golpes ↓ ↑ ✕ aparecen dentro de cada acorde en el carril. Con *Sonido guía*, la app toca la canción con ese rasgueo.
 - Con la calificación por micrófono, la app revisa que cada acorde suene a tiempo y te muestra qué cambio de la secuencia te cuesta más, con un atajo para practicar ese par.
 
 ## Entrenador de rasgueo

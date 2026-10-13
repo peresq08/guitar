@@ -4,7 +4,8 @@ import { data, save, bestFor, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { chordTemplate, LAB_MIN, LAB_DIFF } from "../detect.js";
-import { Highway, Feedback, ChordJudge } from "../ui/highway.js";
+import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
+import { openChordCalibration } from "../ui/calib.js";
 
 const C = { mode: "mic", run: false, tick: null, t0: 0, next: 0, k: 0, auto: 0, bpm: 60, per: 4, lastWarn: 0, micRes: null, listen: false };
 const D = { loop: null, det: null, cal: null };
@@ -19,7 +20,7 @@ export function mountCambios(el) {
   el.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
   <div class="col">
-  <div class="panel deck-panel">
+  <div class="panel deck-panel screen">
    <div class="deck">
     <div class="deck-top">
       <select id="cA" aria-label="Primer acorde" style="flex:0 1 110px">${opts}</select><span class="muted num">↔</span>
@@ -55,6 +56,7 @@ export function mountCambios(el) {
         </span>
       </span>
       <span class="deck-tempo" id="cTempo"></span>
+      <select id="cDur" aria-label="Duración de la ronda"><option value="1">1 minuto</option><option value="2">2 minutos</option><option value="3">3 minutos</option><option value="5">5 minutos</option><option value="10">10 minutos</option></select>
       <button class="btn primary" id="cStart" data-primary>Empezar reto</button>
     </div>
    </div>
@@ -73,8 +75,8 @@ export function mountCambios(el) {
       <label class="field" for="micSens" style="flex:1">Sensibilidad<select id="micSens"><option value="alta">Alta (cuarto silencioso)</option><option value="media">Media</option><option value="baja">Baja (cuarto con ruido)</option></select></label>
       <button class="btn small" id="micNoise" style="align-self:flex-end">Medir ruido</button>
     </div>
-    <div class="row"><button class="btn small" id="calA"></button><button class="btn small" id="calB"></button></div>
-    <p class="note">Calibra cada acorde una vez: rasguéalo 4 segundos con tu guitarra y en tu cuarto. Ayuda mucho con acordes parecidos como D y Dm.</p>
+    <div class="row between"><span class="note" id="calState"></span><button class="btn small" id="calBtn">Calibrar acordes</button></div>
+    <p class="note">Calibra cada acorde una vez: rasguéalo 4 segundos con tu guitarra y en tu cuarto. Se guarda en este dispositivo y ayuda mucho con acordes parecidos como D y Dm.</p>
   </div>
   <div class="panel">
     <div class="row between"><div class="label">Tu avance con este par</div><span class="chip acc" id="cBest"></span></div>
@@ -97,13 +99,15 @@ export function mountCambios(el) {
     const st = $("#micStatus", cel); st.textContent = "Silencia las cuerdas con la mano y no toques…";
     await A.measureNoise(1200); st.textContent = "Listo. Ruido de fondo medido.";
   };
-  $("#calA", el).onclick = () => calibrate("A"); $("#calB", el).onclick = () => calibrate("B");
+  $("#calBtn", el).onclick = () => { if (!C.run) openChordCalibration([A_(), B_()], { title: `Calibrar ${A_()} y ${B_()}`, onDone: () => setPair(A_(), B_()) }); };
   const gAuto = $("#gAuto", el), gMic = $("#gMic", el);
   gAuto.checked = data.ajustes.tempoAuto !== false; gMic.checked = data.ajustes.calificarMic !== false;
   gAuto.onchange = () => { data.ajustes.tempoAuto = gAuto.checked; save(); renderTrainer(); };
   gMic.onchange = () => { data.ajustes.calificarMic = gMic.checked; save(); setMode(C.mode); };
   ["gBpm", "gPer"].forEach(id => $("#" + id, el).onchange = () => idle());
   $("#cStart", el).onclick = startChallenge;
+  const dur = $("#cDur", el); dur.value = String(data.ajustes.cambiosMin || 1);
+  dur.onchange = () => { data.ajustes.cambiosMin = +dur.value; save(); idle(); };
   const rn = $("#resN", el);
   $("#rMinus", el).onclick = () => rn.value = Math.max(0, (+rn.value || 0) - 1);
   $("#rPlus", el).onclick = () => rn.value = (+rn.value || 0) + 1;
@@ -173,8 +177,8 @@ function setPair(a, b) {
   $("#cA", cel).value = a; $("#cB", cel).value = b;
   try { localStorage.setItem("riff-par", JSON.stringify([a, b])); } catch (e) {}
   $("#mA", cel).textContent = a; $("#mB", cel).textContent = b;
-  $("#calA", cel).textContent = (data.calibracion[a] ? "Recalibrar " : "Calibrar ") + a;
-  $("#calB", cel).textContent = (data.calibracion[b] ? "Recalibrar " : "Calibrar ") + b;
+  const nCal = [a, b].filter(c => data.calibracion[c]).length;
+  $("#calState", cel).textContent = nCal === 2 ? `${a} y ${b} calibrados` : nCal === 1 ? `${data.calibracion[a] ? a : b} calibrado; falta ${data.calibracion[a] ? b : a}` : "Sin calibrar";
   renderCambiosStats(); renderTrainer();
 }
 function setMode(m) {
@@ -184,16 +188,19 @@ function setMode(m) {
   $("#cHwy", cel).hidden = m === "libre";
   $("#micCfg", cel).hidden = !(m === "mic" || (m === "guia" && $("#gMic", cel).checked));
   $("#modeNote", cel).textContent = {
-    libre: "Cuenta los cambios en voz alta. Al terminar el minuto escribes el número.",
+    libre: "Cuenta los cambios en voz alta. Al terminar la ronda escribes el número.",
     guia: "Cambia con el clic. El carril muestra lo que viene; con micrófono, cada cambio se califica al momento.",
     mic: "Cambia a tu ritmo: la app escucha, cuenta los cambios y te muestra cada uno en el carril.",
   }[m];
   renderTrainer(); idle();
 }
+const mins = () => +($("#cDur", cel)?.value || 1);
+const fmt = s => s >= 60 ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : String(Math.ceil(s));
 function diag(name) { return CHORDS[name] ? diagram(name) : ""; }
 function showNow(name, sub) {
-  $("#stNum", cel).className = "chordnow"; $("#stNum", cel).textContent = name;
-  $("#stDiag", cel).innerHTML = diag(name);
+  const n = $("#stNum", cel), changed = n.textContent !== name || n.classList.contains("big");
+  n.classList.remove("big"); n.classList.add("chordnow"); swapText(n, name);
+  if (changed) $("#stDiag", cel).innerHTML = diag(name);
   if (sub !== undefined) $("#stSub", cel).textContent = sub;
 }
 function showNext(name) {
@@ -205,7 +212,7 @@ function idle() {
   const tp = C.mode === "guia" ? guiaTempo() : null;
   $("#cTempo", cel).innerHTML = tp ? `${tp.bpm}<small>BPM</small>` : "";
   if (C.mode === "libre") {
-    $("#stNum", cel).className = "big"; $("#stNum", cel).textContent = "60"; $("#stDiag", cel).innerHTML = diag(A_());
+    $("#stNum", cel).className = "big"; $("#stNum", cel).textContent = fmt(mins() * 60); $("#stDiag", cel).innerHTML = diag(A_());
     showNext(B_()); $("#stSub", cel).textContent = "Tendrás 3 segundos para poner las manos en la guitarra";
   } else {
     showNow(A_(), tp ? `${tp.bpm} BPM · cambias cada ${tp.per} ${tp.per === 1 ? "tiempo" : "tiempos"} · ${tp.cpm} cambios por minuto` : "Empieza con " + A_() + " y cambia a tu ritmo");
@@ -297,24 +304,10 @@ function onJudge(s, status) {
   hw.mark(s.id, status);
   if (C.run) fb.show(status);
 }
-async function calibrate(which) {
-  if (C.run || !(await startMic())) return;
-  const name = which === "A" ? A_() : B_(), btn = $(which === "A" ? "#calA" : "#calB", cel), st = $("#micStatus", cel);
-  btn.disabled = true;
-  for (let i = 3; i > 0; i--) { st.textContent = `Prepárate para rasguear ${name}… ${i}`; A.beep(800, .07); await new Promise(r => setTimeout(r, 1000)); }
-  A.beep(1200, .12); D.cal = []; st.textContent = `Rasguea ${name} varias veces…`;
-  await new Promise(r => setTimeout(r, 4000));
-  const fr = D.cal; D.cal = null; btn.disabled = false;
-  if (fr.length < 8) { st.textContent = "Casi no escuché la guitarra: la barra de volumen no pasó la línea. Sube la sensibilidad o acerca el teléfono y vuelve a intentar."; return; }
-  const avg = new Array(12).fill(0); fr.forEach(c => c.forEach((x, i) => avg[i] += x));
-  data.calibracion[name] = A.norm(avg); save(); A.chime();
-  st.textContent = `${name} calibrado.`; setPair(A_(), B_());
-}
-
 /* ---- Reto ---- */
 function stop() {
   C.run = false; clearInterval(C.tick); A.keepAwake(false); hw.stop();
-  $("#cStart", cel).textContent = "Empezar reto"; $("#cA", cel).disabled = $("#cB", cel).disabled = false;
+  $("#cStart", cel).textContent = "Empezar reto"; $("#cA", cel).disabled = $("#cB", cel).disabled = false; $("#cDur", cel).disabled = false;
   cel.querySelectorAll("[data-mode]").forEach(b => b.disabled = false);
 }
 async function startChallenge() {
@@ -330,7 +323,8 @@ async function startChallenge() {
   window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo"));
   C.starting = false;
   $("#cResult", cel).hidden = true;
-  C.run = true; C.t0 = a.currentTime + 3; C.listen = listen;
+  C.run = true; C.t0 = a.currentTime + 3; C.listen = listen; C.min = mins(); C.dur = C.min * 60;
+  $("#cDur", cel).disabled = true;
   C.autoTempo = C.mode === "guia" && $("#gAuto", cel).checked;
   Object.assign(C, C.mode === "guia" ? guiaTempo() : {});
   C.next = C.t0; C.k = 0; C.auto = 0; C.lastWarn = 0;
@@ -339,9 +333,9 @@ async function startChallenge() {
   if (C.mode === "guia") {
     // Línea de tiempo completa del minuto: el carril la muestra acercándose desde la cuenta regresiva
     const segLen = C.per * 60 / C.bpm, segs = [];
-    for (let i = 0; C.t0 + i * segLen < C.t0 + 60 - .01; i++) {
+    for (let i = 0; C.t0 + i * segLen < C.t0 + C.dur - .01; i++) {
       const c = i % 2 === 0 ? A_() : B_();
-      segs.push({ id: "g" + i, t0: C.t0 + i * segLen, t1: Math.min(C.t0 + (i + 1) * segLen, C.t0 + 60), c, isChange: i > 0 });
+      segs.push({ id: "g" + i, t0: C.t0 + i * segLen, t1: Math.min(C.t0 + (i + 1) * segLen, C.t0 + C.dur), c, isChange: i > 0 });
     }
     hw.addMany(segs.map(s => ({ id: s.id, t0: s.t0, t1: s.t1, label: s.c })));
     judge.setSegments(listen ? segs : []);
@@ -364,27 +358,27 @@ function tick() {
     else showNow(A_(), `Empieza en ${Math.ceil(C.t0 - now)}…`);
     return;
   }
-  const el = now - C.t0, left = Math.max(0, 60 - el);
+  const el = now - C.t0, left = Math.max(0, C.dur - el);
   if (C.mode === "guia") {
-    while (C.next < now + .12 && C.next < C.t0 + 60) { A.click(C.k % C.per === 0, C.next); C.next += 60 / C.bpm; C.k++; }
+    while (C.next < now + .12 && C.next < C.t0 + C.dur) { A.click(C.k % C.per === 0, C.next); C.next += 60 / C.bpm; C.k++; }
     const idx = Math.floor(Math.floor(el / (60 / C.bpm)) / C.per);
     const cur = idx % 2 === 0 ? A_() : B_(), nx = idx % 2 === 0 ? B_() : A_();
-    lab.textContent = `Quedan ${Math.ceil(left)} s`;
+    lab.textContent = `Quedan ${fmt(left)}${left < 60 ? " s" : ""}`;
     if ($("#stNum", cel).textContent !== cur || $("#stNum", cel).className !== "chordnow") { showNow(cur); showNext(nx); }
-    subt.textContent = `Cambio ${idx} · ${C.bpm} BPM`; C.auto = Math.min(idx, Math.ceil(C.bpm / C.per) - 1);
+    subt.textContent = `Cambio ${idx} · ${C.bpm} BPM`; C.auto = Math.min(idx, Math.ceil(C.bpm * C.min / C.per) - 1);
   } else if (C.mode === "mic") {
     const d = D.det;
-    lab.textContent = `Quedan ${Math.ceil(left)} s`;
+    lab.textContent = `Quedan ${fmt(left)}${left < 60 ? " s" : ""}`;
     if (!d || !d.cur) { $("#stNum", cel).className = "chordnow"; $("#stNum", cel).textContent = "…"; }
     subt.textContent = "Cambios detectados: " + (d ? d.changes : 0);
   } else {
-    lab.textContent = "Cambia y cuenta"; $("#stNum", cel).className = "big"; $("#stNum", cel).textContent = Math.ceil(left);
+    lab.textContent = "Cambia y cuenta"; $("#stNum", cel).className = "big"; $("#stNum", cel).textContent = fmt(left);
     const s = Math.ceil(left); if (s <= 3 && s > 0 && C.lastWarn !== s) { C.lastWarn = s; A.beep(700, .06); }
   }
   if (left <= 0) finish();
 }
 function finish() {
-  if (C.mode === "guia" && C.listen) judge.flush(C.t0 + 60);
+  if (C.mode === "guia" && C.listen) judge.flush(C.t0 + C.dur);
   stop(); A.chime(); $("#stage", cel).classList.remove("live");
   $("#stLab", cel).textContent = "¡Tiempo!"; $("#stSub", cel).textContent = fb.best ? `Mejor racha: ${fb.best}` : "";
   const prev = bestFor(pairKey()), rn = $("#resN", cel), rl = $("#resLabel", cel);
@@ -401,18 +395,20 @@ function finish() {
       C.micRes = { changes: C.auto, clean };
       rn.value = clean; rl.textContent = `El micrófono escuchó ${clean} de ${C.auto} cambios limpios y a tiempo a ${C.bpm} BPM. Corrige el número si hace falta.`;
     } else { rn.value = C.auto; rl.textContent = `Hubo ${C.auto} cambios a ${C.bpm} BPM. ¿Cuántos salieron limpios?`; }
-  } else { rn.value = prev || 0; rl.textContent = "¿Cuántos cambios lograste?"; }
+  } else { rn.value = (prev || 0) * C.min; rl.textContent = C.min > 1 ? `¿Cuántos cambios lograste en ${C.min} minutos?` : "¿Cuántos cambios lograste?"; }
   $("#cResult", cel).hidden = false;
 }
 function saveResult() {
-  const n = Math.max(0, Math.round(+$("#resN", cel).value || 0)), k = pairKey(), prev = bestFor(k);
+  // El récord se guarda por minuto para comparar rondas de distinta duración
+  const total = Math.max(0, Math.round(+$("#resN", cel).value || 0)), n = Math.round(total / (C.min || 1)), k = pairKey(), prev = bestFor(k);
   const rec = { par: k, n, t: new Date().toISOString(), modo: C.mode };
+  if (C.min > 1) { rec.total = total; rec.min = C.min; }
   if (C.mode === "guia") rec.bpm = C.bpm;
   if (C.micRes) rec.limpios = C.micRes.clean;
   data.intentos.push(rec);
-  let msg = n > prev ? (prev ? `¡Nuevo récord! Antes: ${prev}` : "Primer registro guardado") : `Guardado. Tu récord sigue en ${prev}`;
+  let msg = (C.min > 1 ? `${n} cambios por minuto. ` : "") + (n > prev ? (prev ? `¡Nuevo récord! Antes: ${prev}` : "Primer registro guardado") : `Guardado. Tu récord sigue en ${prev}`);
   if (C.mode === "guia" && C.autoTempo && C.auto > 0) {
-    const ratio = Math.min(1, n / C.auto), cpm = C.cpm, next = nextCpm(cpm, ratio), pct = Math.round(ratio * 100);
+    const ratio = Math.min(1, total / C.auto), cpm = C.cpm, next = nextCpm(cpm, ratio), pct = Math.round(ratio * 100);
     data.entrenador = data.entrenador || {};
     const t = data.entrenador[k] || { cpm, hist: [] };
     t.cpm = next; t.hist = [...(t.hist || []), { t: rec.t, cpm, ratio: Math.round(ratio * 100) / 100 }].slice(-60);

@@ -9,7 +9,7 @@ export function mount(el) {
   el.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
   <div class="col">
-  <div class="panel tuner">
+  <div class="panel tuner screen">
     <div class="label">Afinación estándar · E A D G B e</div>
     <svg viewBox="0 0 300 170" aria-hidden="true">
       <path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>

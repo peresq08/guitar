@@ -41,7 +41,7 @@ function render() {
   root.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1.55fr) minmax(0,1fr)">
   <div class="col">
-  <div class="panel">
+  <div class="panel screen">
     <div class="row between">
       <div><div class="label">Rutina de hoy</div><h2>${R.finished ? "Rutina terminada" : esc(b.n)}</h2></div>
       <div class="big" id="hBig">${fmt(Math.ceil(R.left))}</div>

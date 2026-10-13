@@ -3,7 +3,8 @@
 import { data, save, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
-import { Highway, Feedback } from "../ui/highway.js";
+import { Highway, Feedback, swapText } from "../ui/highway.js";
+import { openRhythmCalibration } from "../ui/calib.js";
 
 let el, hw, fb, micWarned = false;
 // Cada casilla es una subdivisión. d/D = abajo (mayúscula = acento), u/U = arriba, x = golpe apagado, - = la mano pasa sin tocar.
@@ -26,6 +27,9 @@ const valid = (p, spb) => [...p].every((c, i) => spb === 3 || c === "-" || c ===
 
 const store = () => { data.rasgueos = data.rasgueos || { custom: [], prog: {} }; return data.rasgueos; };
 const all = () => [...PATTERNS, ...(store().custom || [])];
+export const allPatterns = () => all();
+export const patternById = id => all().find(p => p.id === id) || null;
+export const STRUM_SYMBOL = SYMBOL;
 const curP = () => all().find(p => p.id === data.ajustes.rasgueoId) || PATTERNS[1];
 const prog = id => store().prog[id] || { bpm: (all().find(p => p.id === id) || PATTERNS[1]).bpm, best: 0, hist: [] };
 const clampB = v => Math.max(40, Math.min(220, Math.round(v)));
@@ -38,7 +42,7 @@ export function mountRasgueo(container) {
   el.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
   <div class="col">
-  <div class="panel deck-panel">
+  <div class="panel deck-panel screen">
    <div class="deck">
     <div class="deck-top">
       <select id="rgPick" aria-label="Elegir patrón"></select>
@@ -58,10 +62,11 @@ export function mountRasgueo(container) {
     <div class="panel hl" id="rgResult" hidden></div>
     <div class="deck-ctl">
       <select id="rgChords" aria-label="Acordes" style="max-width:190px"></select>
-      <select id="rgLen" aria-label="Duración"><option value="8">8 compases</option><option value="16">16 compases</option><option value="0">Sin fin</option></select>
+      <select id="rgLen" aria-label="Duración"><option value="8">8 compases</option><option value="16">16 compases</option><option value="m1">1 minuto</option><option value="m2">2 minutos</option><option value="m3">3 minutos</option><option value="m5">5 minutos</option><option value="0">Sin fin</option></select>
       <label class="chip-toggle"><input type="checkbox" id="rgGuide" checked> Sonido guía</label>
       <label class="chip-toggle" id="rgRampRow"><input type="checkbox" id="rgRamp"> +2 BPM cada 4 compases</label>
       <label class="chip-toggle"><input type="checkbox" id="rgMic"> Calificar con micrófono</label>
+      <button class="btn small ghost" id="rgCal">Calibrar ritmo</button>
       <button class="btn primary" id="rgStart" data-primary>Empezar</button>
     </div>
    </div>
@@ -71,6 +76,7 @@ export function mountRasgueo(container) {
   <div class="panel">
     <div class="row between" style="align-items:flex-start"><div style="min-width:0"><div class="label" id="rgLevel"></div><h2 id="rgName"></h2></div><span class="chip acc" id="rgBest"></span></div>
     <p class="note" id="rgDesc"></p>
+    <p class="note" id="rgLatState"></p>
   </div>
   <div class="panel" id="rgHist"></div>
   <div class="panel">
@@ -89,6 +95,7 @@ export function mountRasgueo(container) {
   $("#rgGuide", el).onchange = e => { data.ajustes.rasgueoGuia = e.target.checked; save(); };
   $("#rgMic", el).onchange = e => { data.ajustes.rasgueoMic = e.target.checked; save(); };
   $("#rgStart", el).onclick = toggle;
+  $("#rgCal", el).onclick = () => { if (!R.run) openRhythmCalibration({ onDone: latState }); };
   window.addEventListener("riff:stop-rasgueo", () => R.run && stop(true));
   render();
 }
@@ -100,7 +107,7 @@ function render() {
   $("#rgName", el).textContent = p.nombre;
   const groups = {}; all().forEach(x => { const k = x.custom ? "Tus patrones" : "Nivel " + x.nivel; (groups[k] = groups[k] || []).push(x); });
   $("#rgPick", el).innerHTML = Object.entries(groups).map(([k, xs]) => `<optgroup label="${k}">${xs.map(x => `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${esc(x.nombre)}</option>`).join("")}</optgroup>`).join("");
-  $("#rgDesc", el).textContent = p.desc || "";
+  $("#rgDesc", el).textContent = p.desc || ""; latState();
   $("#rgBest", el).textContent = g.best ? `Mejor: ${g.best} BPM limpio` : "Sin marca aún";
   setBpm(g.bpm, false);
   const sel = $("#rgChords", el), cur = data.ajustes.rasgueoAcordes || "c:Em";
@@ -136,8 +143,12 @@ function chordPlan() {
   const find = b => { let p = ((b % total) + total) % total; for (let i = 0; i < q.acordes.length; i++) { if (p < q.acordes[i].t) return i; p -= q.acordes[i].t; } return 0; };
   return { name: q.nombre, at: b => q.acordes[find(b)].c, next: b => q.acordes[(find(b) + 1) % q.acordes.length].c };
 }
+function latState() {
+  const L = data.ajustes.latenciaMic;
+  $("#rgLatState", el).innerHTML = L != null ? `<b>Ritmo calibrado:</b> tu micrófono tarda ${Math.round(L * 1000)} ms. La calificación ya lo toma en cuenta.` : `<b>Ritmo sin calibrar.</b> La app estima el retraso del micrófono en cada ronda; calibrarlo una vez la hace más exacta, sobre todo en semicorcheas.`;
+}
 function showChord(c, nx) {
-  if ($("#rgChord", el).textContent !== c) { $("#rgChord", el).textContent = c; $("#rgDiag", el).innerHTML = CHORDS[c] ? diagram(c) : ""; }
+  if ($("#rgChord", el).textContent !== c) { swapText($("#rgChord", el), c); $("#rgDiag", el).innerHTML = CHORDS[c] ? diagram(c) : ""; }
   $("#rgNextBox", el).hidden = !nx; $("#rgNext", el).textContent = nx || "";
 }
 function idle() {
@@ -148,7 +159,7 @@ function idle() {
   if (!R.run && hw) {
     fb.reset();
     const p = curP(), dt = 60 / R.bpm / p.spb, list = [];
-    for (let k = 0, t = 1; t < 12; k++, t += dt) { const c = p.p[k % p.p.length]; if (c !== "-") list.push({ id: "p" + k, t, sym: SYMBOL[c], acc: "DU".includes(c) }); }
+    for (let k = 0, t = .3; t < 12; k++, t += dt) { const c = p.p[k % p.p.length]; if (c !== "-") list.push({ id: "p" + k, t, sym: SYMBOL[c], acc: "DU".includes(c) }); }
     hw.preview(list);
   }
 }
@@ -216,7 +227,7 @@ function preview(p) {
 }
 
 /* ---------- Sonido y reproducción ---------- */
-function playHit(c, frets, t, slot) {
+export function playHit(c, frets, t, slot) {
   if (c === "-") return;
   if (c === "x") { A.chuck(t, .45); return; }
   const acc = c === "D" || c === "U", down = c === "d" || c === "D";
@@ -236,12 +247,14 @@ async function toggle() {
   }
   window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-cambios")); window.dispatchEvent(new Event("riff:stop-seq"));
   const p = curP(); R.pat = p; R.plan = chordPlan();
-  R.len = +($("#rgLen", el).value || 8); R.ramp = R.len === 0 && $("#rgRamp", el).checked; R.guide = $("#rgGuide", el).checked;
+  // Duración: compases, o minutos convertidos a compases completos al tempo actual
+  const lenV = $("#rgLen", el).value || "8";
+  R.len = lenV.startsWith("m") ? Math.max(1, Math.ceil(+lenV.slice(1) * R.bpm / (p.p.length / p.spb))) : +lenV; R.ramp = R.len === 0 && $("#rgRamp", el).checked; R.guide = $("#rgGuide", el).checked;
   R.slotsPerBar = p.p.length; R.beatsPerBar = p.p.length / p.spb;
   const beat = 60 / R.bpm;
   R.k = -R.beatsPerBar * p.spb;   // compás de entrada, en casillas
   R.next = a.currentTime + .12; R.t0 = R.next + R.beatsPerBar * beat;
-  R.hits = []; R.onsets = []; R.sched = []; R.bars = 0; R.lat = .06; R.latAt = 0; R.jIdx = 0; R.used = new Set(); R.barStat = {};
+  R.hits = []; R.onsets = []; R.sched = []; R.bars = 0; R.lat = data.ajustes.latenciaMic ?? .06; R.latAt = 0; R.jIdx = 0; R.used = new Set(); R.barStat = {};
   R.hitsPerBar = [...p.p].filter(c => c !== "-").length;
   hw.reset(); fb.reset(); hw.tickOffset = R.lat;
   hw.addMany(projectHits(0, R.t0, R.bpm, R.len ? Infinity : R.t0 + 14));
@@ -341,12 +354,13 @@ function finishAt(tEnd) {
 /* ---------- Calificación ---------- */
 // La latencia del micrófono es desconocida (varía por equipo), así que se estima: se busca el desfase que
 // alinea más golpes detectados con los esperados. Después se mide qué tan parejo vas respecto a ese desfase.
-export function analyze(hits, onsets, slotDur) {
+export function analyze(hits, onsets, slotDur, prior = data.ajustes.latenciaMic) {
   const win = Math.min(slotDur * .4, .07);
   // Patrones muy parejos (semicorcheas continuas) encajan igual de bien corridos una casilla, así que el
   // desfase se busca solo en un rango realista y, entre opciones casi empatadas, gana el más cercano a 60 ms.
   const cands = [];
-  for (let L = -.04; L <= .2; L += .002) {
+  const lo = prior != null ? prior - .05 : -.04, hi = prior != null ? prior + .05 : .2, center = prior != null ? prior : .06;
+  for (let L = lo; L <= hi; L += .002) {
     let score = 0, err = 0, j = 0;
     for (const h of hits) {
       const t = h.t + L;
@@ -358,7 +372,7 @@ export function analyze(hits, onsets, slotDur) {
   const top = Math.max(...cands.map(c => c.score));
   const near = cands.filter(c => c.score >= top * .97);
   // dentro de los casi empatados, primero el de menor error medio; si hay varios grupos separados, el más cercano a 60 ms
-  near.sort((a, b) => (Math.abs(a.L - .06) - Math.abs(b.L - .06)));
+  near.sort((a, b) => (Math.abs(a.L - center) - Math.abs(b.L - center)));
   const region = near.filter(c => Math.abs(c.L - near[0].L) < win);
   region.sort((a, b) => b.score - a.score || a.err - b.err);
   const bestL = region.length ? region[0].L : 0;

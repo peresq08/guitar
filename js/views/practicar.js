@@ -50,7 +50,7 @@ function mountMetro(el) {
   el.innerHTML = `
   <div class="cols">
   <div class="col">
-  <div class="panel">
+  <div class="panel screen">
     <div class="row between" style="align-items:flex-end">
       <div><div class="label" id="mMeterLbl">Tempo · 4/4</div><div class="big"><span id="mBpm">80</span><span style="font-size:1.1rem;color:var(--muted)"> BPM</span></div></div>
       <button class="btn small" id="mTap">Tap</button>
@@ -161,7 +161,7 @@ function mountJam(el) {
   el.innerHTML = `
   <div class="cols" style="--cols:minmax(0,1fr) minmax(0,1.4fr)">
   <div class="col">
-  <div class="panel">
+  <div class="panel screen">
     <div><div class="label">Pista de acompañamiento</div><h2>Improvisa sobre una banda virtual</h2></div>
     <select id="jStyle" aria-label="Estilo">${STYLES.map(s => `<option value="${s.id}">${s.name}</option>`).join("")}</select>
     <p class="note" id="jNote"></p>

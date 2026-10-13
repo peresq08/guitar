@@ -75,6 +75,11 @@ function render() {
 
   <div class="panel">
     <div class="label">Ajustes y respaldo</div>
+    <div class="stack" style="gap:6px">
+      <span><b>Calibración del micrófono</b></span>
+      <span class="note">${Object.keys(data.calibracion || {}).length ? `Acordes calibrados: ${Object.keys(data.calibracion).join(", ")}.` : "Ningún acorde calibrado."} ${data.ajustes.latenciaMic != null ? `Retraso del micrófono: ${Math.round(data.ajustes.latenciaMic * 1000)} ms.` : "Ritmo sin calibrar."} Se guarda en este dispositivo y viaja en el respaldo.</span>
+      ${Object.keys(data.calibracion || {}).length || data.ajustes.latenciaMic != null ? `<button class="btn small ghost" id="calReset" style="align-self:flex-start">Borrar toda la calibración</button>` : ""}
+    </div>
     <label class="field" for="theme">Apariencia<select id="theme">
       <option value="">Igual que el sistema</option><option value="light">Clara</option><option value="dark">Oscura</option></select></label>
     <p class="note">Tus datos viven en este dispositivo. Descarga un respaldo para pasarlos a otro teléfono o computadora, o para no perderlos si borras el navegador.</p>
@@ -151,6 +156,11 @@ function bind() {
     data.canciones.push({ id: "u" + Date.now(), titulo: t, artista: $("#nsA", root).value.trim(), bpmMeta: +$("#nsB", root).value || null, nivel: +$("#nsN", root).value, estado: "practicando", notas: "" });
     save(); toast("Canción agregada a Practicando");
   };
+  let calArmed = false;
+  $("#calReset", root)?.addEventListener("click", e => {
+    if (!calArmed) { calArmed = true; e.target.textContent = "¿Seguro? Toca otra vez"; setTimeout(() => { calArmed = false; if (e.target.isConnected) e.target.textContent = "Borrar toda la calibración"; }, 3000); return; }
+    data.calibracion = {}; delete data.ajustes.latenciaMic; save(); toast("Calibración borrada");
+  });
   const th = $("#theme", root); th.value = getTheme();
   th.onchange = () => { try { localStorage.setItem("riff-theme", th.value); } catch (e) {} applyTheme(); };
   $("#bExp", root).onclick = () => {
