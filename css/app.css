@@ -540,3 +540,34 @@ h3{font-size:1.3rem;font-weight:700}
 .rc-dots i.ok{background:var(--good)} .rc-dots i.miss{background:var(--led)}
 @media (max-width:520px){ .cal-stage{grid-template-columns:1fr} .cal-list li{flex-wrap:wrap} }
 @media (prefers-reduced-motion: reduce){ .chordnow.swap,.sheet,.sheet-wrap{animation:none} }
+
+/* Rasgueo dentro de la tarjeta de Secuencias */
+.stage-strum{margin-top:4px;gap:4px}
+.stage-strum .scell{padding:8px 0 5px}
+.stage-strum .scell .sym{font-size:1.7rem}
+.stage-strum .scell.acc .sym{font-size:1.95rem}
+.screen .stage-strum .scell.next{border-color:rgba(242,163,58,.7);box-shadow:0 0 0 1px rgba(242,163,58,.5) inset}
+.screen .stage-strum .scell.on .sym{color:var(--accent-ink)}
+.dstage .meta{align-self:stretch;justify-content:space-between}
+
+/* Ajustes del micrófono */
+.ms-meter{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;font-weight:600}
+.ms-meter .bar{height:10px}
+.ms-block{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
+.chip.bad{color:var(--led);border-color:var(--led)}
+
+/* Menús desplegables legibles en tema oscuro y dentro de las pantallas oscuras */
+select option,select optgroup{background-color:var(--panel);color:var(--ink)}
+.screen select option,.screen select optgroup,.sheet select option,.sheet select optgroup{background-color:#1a2029;color:#eef1f5}
+select optgroup{font-weight:700;color:var(--muted)}
+.screen select optgroup,.sheet select optgroup{color:#f2a33a}
+.dstage:has(.stage-strum:not([hidden])){min-height:0}
+@media (min-width:1000px) and (max-height:760px){
+  #sqStrip{display:none}
+  .stage-strum .scell{padding:5px 0 3px}
+  .stage-strum .scell .sym{font-size:1.4rem}
+  .stage-strum .scell.acc .sym{font-size:1.6rem}
+  .dstage:has(.stage-strum:not([hidden])) .now .chordnow{font-size:3rem}
+  .dstage:has(.stage-strum:not([hidden])) .now .chord svg{width:58px;height:72px}
+}
+#msEco .chip{white-space:normal;line-height:1.35;padding:5px 10px}

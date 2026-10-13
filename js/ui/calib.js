@@ -158,3 +158,60 @@ export function openRhythmCalibration({ onDone } = {}) {
   };
   render();
 }
+
+/* ---------- Ajustes del micrófono (en un solo lugar) ---------- */
+export function openMicSettings({ chords = null, rhythm = false, title = "Micrófono", onDone } = {}) {
+  const { body } = sheet(title, () => { clearInterval(meter); onDone?.(); });
+  let meter = null;
+  const ecoMsg = () => data.ajustes.ecoOk === true ? `<span class="chip good">Bocinas probadas: el micrófono no escucha la app</span>`
+    : data.ajustes.ecoOk === false ? `<span class="chip bad">El micrófono escucha las bocinas: usa audífonos con el sonido guía</span>` : `<span class="chip">Bocinas sin probar</span>`;
+  body.innerHTML = `
+    <p class="sheet-lead">Ajustes guardados en este dispositivo. Toca un acorde y mira la barra: debe pasar la línea cuando tocas y quedar debajo en silencio.</p>
+    <div class="ms-meter"><span>Volumen</span><div class="bar lvlbar"><div id="msLvl" class="lvl"></div><i id="msGate"></i></div></div>
+    <div class="row" style="gap:10px;align-items:flex-end">
+      <label class="field" for="msSens" style="flex:1">Sensibilidad<select id="msSens"><option value="alta">Alta (cuarto silencioso)</option><option value="media">Media</option><option value="baja">Baja (cuarto con ruido)</option></select></label>
+      <button class="btn small" id="msNoise">Medir ruido</button>
+    </div>
+    <div class="ms-block">
+      <label class="chip-toggle" style="align-self:flex-start"><input type="checkbox" id="msEcho"> Ignorar el sonido de la app (cancelación de eco)</label>
+      <p class="note">Si practicas con bocinas, el micrófono puede escuchar el clic y el sonido guía y tomarlos como si fueras tú. La cancelación de eco del navegador los resta, igual que en una videollamada. La prueba toca un rasgueo corto: no toques la guitarra mientras suena.</p>
+      <div class="row" style="gap:10px"><button class="btn small" id="msTest">Probar bocinas</button><span id="msEco">${ecoMsg()}</span></div>
+    </div>
+    ${chords ? `<div class="ms-block"><b>Acordes</b><p class="note">${chords.filter(c => data.calibracion[c]).length} de ${chords.length} calibrados.</p><button class="btn small" id="msCal" style="align-self:flex-start">Calibrar acordes</button></div>` : ""}
+    ${rhythm ? `<div class="ms-block"><b>Ritmo</b><p class="note">${data.ajustes.latenciaMic != null ? `Retraso medido: ${Math.round(data.ajustes.latenciaMic * 1000)} ms.` : "Retraso del micrófono sin medir."}</p><button class="btn small" id="msRhythm" style="align-self:flex-start">Calibrar ritmo</button></div>` : ""}
+    <div class="row sheet-foot"><button class="btn" data-close>Listo</button></div>`;
+  const say = t => { body.querySelector("#msEco").innerHTML = `<span class="chip">${esc(t)}</span>`; };
+  const sens = body.querySelector("#msSens"); sens.value = data.ajustes.micSens || "media";
+  sens.onchange = () => { data.ajustes.micSens = sens.value; A.setSensitivity(sens.value); save(); };
+  const echo = body.querySelector("#msEcho"); echo.checked = data.ajustes.eco !== false;
+  echo.onchange = async () => {
+    data.ajustes.eco = echo.checked; A.mic.echo = echo.checked; delete data.ajustes.ecoOk; save();
+    if (A.mic.an) { say("Reiniciando el micrófono…"); await A.micRestart(); }
+    body.querySelector("#msEco").innerHTML = ecoMsg();
+  };
+  body.querySelector("#msNoise").onclick = async () => { if (!(await ensureMic(say))) return; say("Silencia las cuerdas…"); await A.measureNoise(1200); say("Ruido de fondo medido"); };
+  body.querySelector("#msTest").onclick = async e => {
+    const b = e.target; b.disabled = true;
+    if (!(await ensureMic(say))) { b.disabled = false; return; }
+    window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo")); window.dispatchEvent(new Event("riff:stop-cambios"));
+    say("Escuchando la prueba… no toques"); const leak = await A.echoTest(); b.disabled = false;
+    if (leak == null) { say("No se pudo hacer la prueba"); return; }
+    data.ajustes.ecoOk = leak < .15; save();
+    body.querySelector("#msEco").innerHTML = ecoMsg() + (data.ajustes.ecoOk ? "" : `<p class="note" style="margin-top:6px">${echo.checked ? "Aun con la cancelación de eco, el micrófono capta el" : "Activa la cancelación de eco y prueba otra vez. Hoy el micrófono capta el"} ${Math.round(leak * 100)}% de la prueba. Con audífonos se resuelve por completo; si no, desactiva el sonido guía cuando califiques.</p>`);
+  };
+  body.querySelector("#msCal")?.addEventListener("click", () => openChordCalibration(chords, { onDone }));
+  body.querySelector("#msRhythm")?.addEventListener("click", () => openRhythmCalibration({ onDone }));
+  meter = setInterval(() => {
+    if (!A.mic.an || !body.isConnected) return;
+    const fr = A.chroma(), lvl = body.querySelector("#msLvl"), gate = body.querySelector("#msGate");
+    if (lvl) { lvl.style.width = A.meterPos(fr.rms) * 100 + "%"; lvl.classList.toggle("win", fr.on); gate.style.left = A.meterPos(A.gate()) * 100 + "%"; }
+  }, 60);
+  ensureMic(say);
+}
+// Aviso (una vez por sesión) cuando se califica con sonido guía y las bocinas no están probadas
+let guideWarned = false;
+export function warnGuideEcho() {
+  if (guideWarned || data.ajustes.ecoOk === true) return;
+  guideWarned = true;
+  toast(data.ajustes.ecoOk === false ? "Ojo: tu micrófono escucha las bocinas. Usa audífonos con el sonido guía." : "Con sonido guía por bocinas, prueba el micrófono (botón Micrófono) o usa audífonos.");
+}

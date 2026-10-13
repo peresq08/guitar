@@ -103,7 +103,8 @@ export async function keepAwake(on) {
 // El umbral de "hay sonido" se adapta solo: baja de inmediato en cuanto hay un momento de silencio
 // (así se corrige si al activar el micrófono la guitarra estaba sonando) y sube despacio si el cuarto se vuelve más ruidoso.
 const NOISE_CAP = .003, GATE_MIN = .0003;
-export const mic = { an: null, src: null, tb: null, fb: null, noise: .0005, sens: 2.5, error: "" };
+// echo: cancelación de eco del navegador; resta del micrófono lo que suena por las bocinas (clic, sonido guía)
+export const mic = { an: null, src: null, stream: null, tb: null, fb: null, noise: .0005, sens: 2.5, error: "", echo: true };
 export const SENS = { alta: 1.8, media: 2.5, baja: 4 };
 export function setSensitivity(k) { mic.sens = SENS[k] || SENS.media; }
 export function gate() { return Math.max(mic.noise * mic.sens, GATE_MIN); }
@@ -126,7 +127,8 @@ export async function micOn() {
   const a = ctx();
   if (!a || !navigator.mediaDevices?.getUserMedia) { mic.error = "Este navegador no permite usar el micrófono."; return false; }
   try {
-    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: mic.echo, noiseSuppression: false, autoGainControl: false } });
+    mic.stream = st;
     const src = a.createMediaStreamSource(st); const an = a.createAnalyser(); an.fftSize = 8192; an.smoothingTimeConstant = .35;
     src.connect(an); mic.an = an; mic.src = src; mic.tb = new Float32Array(an.fftSize); mic.fb = new Float32Array(an.frequencyBinCount);
   } catch (e) { mic.error = "Sin permiso para el micrófono. Actívalo en la configuración del navegador para esta página."; return false; }
@@ -230,4 +232,23 @@ export function stopOnsets() {
   if (!onsetProc) return;
   try { mic.src.disconnect(onsetProc.proc); onsetProc.proc.disconnect(); onsetProc.mute.disconnect(); } catch (e) {}
   onsetProc.proc.onaudioprocess = null; onsetProc = null;
+}
+
+/* ---- Eco: que el micrófono no confunda el sonido de la app con tu guitarra ---- */
+export async function micRestart() {
+  stopOnsets();
+  try { mic.stream?.getTracks().forEach(t => t.stop()); mic.src?.disconnect(); } catch (e) {}
+  mic.an = null; mic.src = null; mic.stream = null;
+  return micOn();
+}
+// Toca un rasgueo de prueba por las bocinas y mide cuánto llega al micrófono.
+// Devuelve la fracción de cuadros en que el micrófono "oyó" la prueba (0 = nada, 1 = todo).
+export async function echoTest(frets = "320003") {
+  const a = ctx(); if (!a || !mic.an) return null;
+  const base = []; for (let i = 0; i < 10; i++) { base.push(level()); await new Promise(r => setTimeout(r, 50)); }
+  const t0 = a.currentTime + .1;
+  for (let k = 0; k < 6; k++) { strum(frets, t0 + k * .45, { down: k % 2 === 0, vol: .3, dur: .9 }); click(k % 2 === 0, t0 + k * .45 + .22, 1); }
+  let on = 0, n = 0;
+  await new Promise(r => { const iv = setInterval(() => { const fr = chroma(); n++; if (fr.on) on++; if (a.currentTime > t0 + 2.9) { clearInterval(iv); r(); } }, 50); });
+  return n ? on / n : null;
 }

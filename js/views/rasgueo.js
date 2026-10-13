@@ -4,7 +4,7 @@ import { data, save, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { Highway, Feedback, swapText } from "../ui/highway.js";
-import { openRhythmCalibration } from "../ui/calib.js";
+import { openMicSettings, warnGuideEcho } from "../ui/calib.js";
 
 let el, hw, fb, micWarned = false;
 // Cada casilla es una subdivisión. d/D = abajo (mayúscula = acento), u/U = arriba, x = golpe apagado, - = la mano pasa sin tocar.
@@ -66,7 +66,7 @@ export function mountRasgueo(container) {
       <label class="chip-toggle"><input type="checkbox" id="rgGuide" checked> Sonido guía</label>
       <label class="chip-toggle" id="rgRampRow"><input type="checkbox" id="rgRamp"> +2 BPM cada 4 compases</label>
       <label class="chip-toggle"><input type="checkbox" id="rgMic"> Calificar con micrófono</label>
-      <button class="btn small ghost" id="rgCal">Calibrar ritmo</button>
+      <button class="btn small ghost" id="rgCal">Micrófono y calibración</button>
       <button class="btn primary" id="rgStart" data-primary>Empezar</button>
     </div>
    </div>
@@ -95,7 +95,7 @@ export function mountRasgueo(container) {
   $("#rgGuide", el).onchange = e => { data.ajustes.rasgueoGuia = e.target.checked; save(); };
   $("#rgMic", el).onchange = e => { data.ajustes.rasgueoMic = e.target.checked; save(); };
   $("#rgStart", el).onclick = toggle;
-  $("#rgCal", el).onclick = () => { if (!R.run) openRhythmCalibration({ onDone: latState }); };
+  $("#rgCal", el).onclick = () => { if (!R.run) openMicSettings({ rhythm: true, title: "Micrófono y calibración", onDone: latState }); };
   window.addEventListener("riff:stop-rasgueo", () => R.run && stop(true));
   render();
 }
@@ -259,6 +259,7 @@ async function toggle() {
   hw.reset(); fb.reset(); hw.tickOffset = R.lat;
   hw.addMany(projectHits(0, R.t0, R.bpm, R.len ? Infinity : R.t0 + 14));
   hw.run(() => A.now()); R.lastUi = -1; R.startBpm = R.bpm;
+  if (R.listen && R.guide) warnGuideEcho();
   if (R.listen) A.startOnsets(t => { R.onsets.push(t); hw.tick(t, "hit"); });
   R.run = true; $("#rgStage", el).classList.add("live"); $("#rgStart", el).textContent = "Detener"; $("#rgResult", el).hidden = true;
   R.timer = setInterval(tick, 25); A.keepAwake(true); tick();

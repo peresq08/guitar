@@ -5,7 +5,7 @@ import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { classify } from "../detect.js";
 import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
-import { openChordCalibration } from "../ui/calib.js";
+import { openMicSettings, warnGuideEcho } from "../ui/calib.js";
 import { allPatterns, patternById, playHit, STRUM_SYMBOL } from "./rasgueo.js";
 import { LIBRARY } from "../plan.js";
 
@@ -94,6 +94,7 @@ export function mountSecuencias(container) {
         <span class="lab" id="sqLab">Listo</span>
         <div class="now"><span class="chordnow" id="sqNow"></span><span class="stage-chord" id="sqDiag"></span></div>
         <div class="beats" id="sqBeats" style="justify-content:flex-start"></div>
+        <div class="sgrid stage-strum" id="sqStrumGrid" hidden></div>
         <span class="sub" id="sqSub"></span>
       </div>
       <div class="nextbox" id="sqNextBox"><span class="lab">Sigue</span><span class="nxt" id="sqNext"></span><span class="stage-chord" id="sqNextDiag"></span></div>
@@ -107,7 +108,7 @@ export function mountSecuencias(container) {
       <label class="chip-toggle"><input type="checkbox" id="sqAuto"> Tempo automático</label>
       <label class="chip-toggle"><input type="checkbox" id="sqMic"> Calificar con micrófono</label>
       <label class="chip-toggle" id="sqGuideRow"><input type="checkbox" id="sqGuide"> Sonido guía</label>
-      <button class="btn small ghost" id="sqCal">Calibrar acordes</button>
+      <button class="btn small ghost" id="sqCal">Micrófono y calibración</button>
       <select id="sqDur" aria-label="Duración de la ronda"><option value="1">1 minuto</option><option value="2">2 minutos</option><option value="3">3 minutos</option><option value="5">5 minutos</option><option value="10">10 minutos</option></select>
       <button class="btn primary" id="sqStart" data-primary>Empezar ronda</button>
     </div>
@@ -131,7 +132,7 @@ export function mountSecuencias(container) {
   $("#sqGuide", el).onchange = e => { data.ajustes.secGuia = e.target.checked; save(); };
   const dur = $("#sqDur", el); dur.value = String(data.ajustes.secMin || 1);
   dur.onchange = () => { data.ajustes.secMin = +dur.value; save(); };
-  $("#sqCal", el).onclick = () => { if (P.run) return; const q = cur(); openChordCalibration(distinct(q), { title: `Calibrar: ${q.nombre}`, onDone: () => renderStats() }); };
+  $("#sqCal", el).onclick = () => { if (P.run) return; const q = cur(); openMicSettings({ chords: distinct(q), title: "Micrófono y calibración", onDone: () => renderStats() }); };
   const rn = $("#sqResN", el);
   $("#sqMinus", el).onclick = () => rn.value = Math.max(0, (+rn.value || 0) - 1);
   $("#sqPlus", el).onclick = () => rn.value = (+rn.value || 0) + 1;
@@ -177,6 +178,7 @@ function idle() {
   $("#sqStage", el).classList.remove("live");
   $("#sqLab", el).textContent = "Listo"; $("#sqBeats", el).innerHTML = "";
   stageShow(a0 && a0.c, nx && nx.c);
+  strumGrid(q, -1);
   const ch = changesIn(q), total = q.acordes.reduce((s, a) => s + a.t, 0) || 1;
   $("#sqSub", el).textContent = distinct(q).length < 2 ? "Agrega al menos dos acordes distintos" :
     `${q.bpm} BPM · ${q.acordes.length} acordes · ${Math.round(ch * q.bpm / total)} cambios por minuto`;
@@ -187,6 +189,22 @@ function idle() {
     while (q.acordes.length && t < 12 && n < 200) { const a = q.acordes[n % q.acordes.length]; list.push({ id: "p" + n, t0: t, t1: t + a.t * beat, label: a.c }); t += a.t * beat; n++; }
     hw.preview(list, strumHits(q, 1, 12, q.bpm, 0));
   }
+}
+// Patrón de rasgueo en grande dentro de la tarjeta: la casilla que suena se ilumina y la del siguiente golpe se marca
+const COUNTS = { 2: ["", "y"], 3: ["", "y", "a"], 4: ["", "e", "y", "a"] };
+function strumGrid(q, active) {
+  const box = $("#sqStrumGrid", el), p = q.rasgueo ? patternById(q.rasgueo) : null;
+  box.hidden = !p; $("#sqBeats", el).hidden = !!p;
+  if (!p) return;
+  if (box.dataset.pat !== p.id + p.p) {
+    box.dataset.pat = p.id + p.p;
+    box.style.setProperty("--n", p.p.length); box.style.setProperty("--half", p.p.length / 2);
+    box.innerHTML = [...p.p].map((c, i) => { const sub = i % p.spb; return `<div class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${sub === 0 ? "beat" : ""}"><span class="sym">${STRUM_SYMBOL[c]}</span><span class="cnt">${sub === 0 ? Math.floor(i / p.spb) + 1 : COUNTS[p.spb][sub]}</span></div>`; }).join("");
+  }
+  const cells = box.children;
+  let nextHit = -1;
+  if (active >= 0) for (let j = 1; j <= p.p.length; j++) { const k = (active + j) % p.p.length; if (p.p[k] !== "-") { nextHit = k; break; } }
+  for (let i = 0; i < cells.length; i++) { cells[i].classList.toggle("on", i === active); cells[i].classList.toggle("next", i === nextHit && i !== active); }
 }
 // Golpes del patrón de rasgueo a lo largo del tiempo, empezando en t0
 function strumHits(q, t0, until, bpm, k0) {
@@ -211,7 +229,7 @@ function renderStats() {
       <text x="${L}" y="${H - 4}" font-size="9" fill="var(--muted)" font-family="Barlow,sans-serif">BPM por ronda · verde: subió, gris: igual, naranja: bajó</text></svg>`;
   }
   box.innerHTML = `<div class="label">Tu avance con esta secuencia</div>${chart}
-    <p class="note">${q.auto !== false ? "Tempo automático: sube si 85% o más de los cambios salen limpios y a tiempo, se mantiene entre 70 y 85%, y baja si salen menos del 70%." : "Tempo fijo: cámbialo junto al selector de secuencia."}${data.ajustes.secMic !== false ? " La sensibilidad del micrófono se ajusta en Cambios." : ""}</p>
+    <p class="note">${q.auto !== false ? "Tempo automático: sube si 85% o más de los cambios salen limpios y a tiempo, se mantiene entre 70 y 85%, y baja si salen menos del 70%." : "Tempo fijo: cámbialo junto al selector de secuencia."}${data.ajustes.secMic !== false ? " La sensibilidad y la prueba de bocinas están en Micrófono y calibración." : ""}</p>
     ${(() => { const ds = distinct(q), ok = ds.filter(c => data.calibracion[c]); return `<p class="note"><b>Calibración:</b> ${ok.length === ds.length ? "todos los acordes de esta secuencia están calibrados." : `${ok.length} de ${ds.length} acordes calibrados${ds.length - ok.length ? ` (faltan ${ds.filter(c => !data.calibracion[c]).join(", ")})` : ""}.`}</p>`; })()}
     ${fallos.length ? `<div class="stack"><div class="label">Los cambios que más te cuestan</div>
       ${fallos.map(f => { const [a, b] = f.k.split("→"); return `<div class="row between"><span><b>${esc(a)} → ${esc(b)}</b> <span class="note">${Math.round(f.p * 100)}% limpios en ${f.tot} intentos</span></span>
@@ -319,8 +337,9 @@ async function toggle() {
   P.timeline = tl; P.expected = tl.filter(s => s.isChange).length;
   hw.reset(); fb.reset();
   hw.addMany(tl.map(s => ({ id: s.id, t0: s.t0, t1: s.t1, label: s.c })));
-  P.strums = strumHits(q, P.t0, end, P.bpm, 0); P.si = 0; P.guide = !!q.rasgueo && $("#sqGuide", el).checked;
+  P.strums = strumHits(q, P.t0, end, P.bpm, 0); P.si = 0; P.lastSi = -1; P.guide = !!q.rasgueo && $("#sqGuide", el).checked;
   hw.setStrums(P.strums);
+  if (P.guide && P.listen) warnGuideEcho();
   if (P.listen && q.rasgueo) { hw.tickOffset = data.ajustes.latenciaMic ?? .06; A.startOnsets(t => hw.tick(t, "hit")); }
   judge.setSegments(P.listen ? tl : []);
   hw.run(() => A.now());
@@ -372,6 +391,10 @@ function tick() {
     let j = 1, nx = P.segs[(g.s.i + 1) % P.segs.length];
     while (nx.c === g.s.c && j < P.segs.length) { j++; nx = P.segs[(g.s.i + j) % P.segs.length]; }
     stageShow(g.s.c, nx.c !== g.s.c ? nx.c : null);
+  }
+  if (P.strums && P.strums.length) {
+    const p = patternById(cur().rasgueo), dt = 60 / P.bpm / p.spb, k = Math.floor((now - P.t0) / dt + 1e-6), i = ((k % p.p.length) + p.p.length) % p.p.length;
+    if (i !== P.lastSi) { P.lastSi = i; strumGrid(cur(), i); }
   }
   $("#sqLab", el).textContent = left >= 60 ? `Quedan ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")}` : `Quedan ${Math.ceil(left)} s`;
   $("#sqBeats", el).innerHTML = Array.from({ length: g.s.len }, (_, i) => `<i class="${i === g.inSeg ? "on" : ""} ${i === 0 ? "acc" : ""}"></i>`).join("");

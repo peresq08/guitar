@@ -69,7 +69,7 @@ En **Practicar → Secuencias** armas la progresión de una canción (por ejempl
 - Escribe la secuencia de una vez: `G:2 C:2 D:4` cambia los tiempos y `A7 x4` repite.
 - Puedes ligarla a una canción del repertorio; aparece un botón para practicarla desde Progreso y desde la canción del día.
 - El tempo sube o baja solo con las mismas reglas del entrenador de cambios.
-- **Rasgueo en la secuencia:** elige un patrón (por defecto, el sugerido de la canción) y sus golpes ↓ ↑ ✕ aparecen dentro de cada acorde en el carril. Con *Sonido guía*, la app toca la canción con ese rasgueo.
+- **Rasgueo en la secuencia:** elige un patrón (por defecto, el sugerido de la canción) y sus golpes ↓ ↑ ✕ aparecen dentro de cada acorde en el carril y, en grande, en la tarjeta principal, con la casilla que suena iluminada y el siguiente golpe marcado. Con *Sonido guía*, la app toca la canción con ese rasgueo.
 - Con la calificación por micrófono, la app revisa que cada acorde suene a tiempo y te muestra qué cambio de la secuencia te cuesta más, con un atajo para practicar ese par.
 
 ## Entrenador de rasgueo
@@ -80,6 +80,10 @@ En **Practicar → Rasgueo** hay 11 patrones, de negras y pop básico a galope, 
 - **Rondas de 8 o 16 compases**, o **sin fin** con subida de 2 BPM cada 4 compases.
 - **Con el micrófono**, la app detecta cada golpe y te dice cuántos cayeron a tiempo, qué tan parejo vas (en milisegundos) y qué parte del patrón se adelanta o se atrasa (por ejemplo: "las 'a' llegan 27 ms tarde"). Solo sube el tempo cuando el ritmo es sólido.
 - **Crea tus propios patrones** tocando las casillas.
+
+## Bocinas y eco
+
+Si practicas con bocinas, el micrófono puede escuchar el clic y el sonido guía. Por eso la app activa la **cancelación de eco** del navegador (la misma de las videollamadas) y en **Micrófono y calibración** tiene una **prueba de bocinas**: toca un rasgueo corto y mide si llega al micrófono. Si llega, usa audífonos con el sonido guía o desactívalo cuando quieras que la app te califique.
 
 ## Consejos para el micrófono
 

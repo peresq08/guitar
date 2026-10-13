@@ -1,5 +1,6 @@
 import { data, onChange, streak, practiceDays, dayKey, $, $$ } from "./store.js";
 import { currentLevel, ensureSongs } from "./plan.js";
+import * as A from "./audio.js";
 import * as hoy from "./views/hoy.js";
 import * as practicar from "./views/practicar.js";
 import * as afinador from "./views/afinador.js";
@@ -45,6 +46,7 @@ document.addEventListener("keydown", e => {
 });
 
 ensureSongs();
+A.mic.echo = data.ajustes.eco !== false; A.setSensitivity(data.ajustes.micSens || "media");
 for (const [k, v] of Object.entries(VIEWS)) v.mount($("#v-" + k));
 header();
 onChange(() => { header(); for (const v of Object.values(VIEWS)) v.refresh?.(); });

@@ -5,7 +5,7 @@ import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { chordTemplate, LAB_MIN, LAB_DIFF } from "../detect.js";
 import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
-import { openChordCalibration } from "../ui/calib.js";
+import { openChordCalibration, openMicSettings } from "../ui/calib.js";
 
 const C = { mode: "mic", run: false, tick: null, t0: 0, next: 0, k: 0, auto: 0, bpm: 60, per: 4, lastWarn: 0, micRes: null, listen: false };
 const D = { loop: null, det: null, cal: null };
@@ -75,7 +75,7 @@ export function mountCambios(el) {
       <label class="field" for="micSens" style="flex:1">Sensibilidad<select id="micSens"><option value="alta">Alta (cuarto silencioso)</option><option value="media">Media</option><option value="baja">Baja (cuarto con ruido)</option></select></label>
       <button class="btn small" id="micNoise" style="align-self:flex-end">Medir ruido</button>
     </div>
-    <div class="row between"><span class="note" id="calState"></span><button class="btn small" id="calBtn">Calibrar acordes</button></div>
+    <div class="row between"><span class="note" id="calState"></span><span class="row" style="gap:6px"><button class="btn small" id="calBtn">Calibrar acordes</button><button class="btn small" id="ecoBtn">Bocinas y eco</button></span></div>
     <p class="note">Calibra cada acorde una vez: rasguéalo 4 segundos con tu guitarra y en tu cuarto. Se guarda en este dispositivo y ayuda mucho con acordes parecidos como D y Dm.</p>
   </div>
   <div class="panel">
@@ -99,6 +99,7 @@ export function mountCambios(el) {
     const st = $("#micStatus", cel); st.textContent = "Silencia las cuerdas con la mano y no toques…";
     await A.measureNoise(1200); st.textContent = "Listo. Ruido de fondo medido.";
   };
+  $("#ecoBtn", el).onclick = () => { if (!C.run) openMicSettings({ chords: [A_(), B_()], onDone: () => { sens.value = data.ajustes.micSens || "media"; setPair(A_(), B_()); } }); };
   $("#calBtn", el).onclick = () => { if (!C.run) openChordCalibration([A_(), B_()], { title: `Calibrar ${A_()} y ${B_()}`, onDone: () => setPair(A_(), B_()) }); };
   const gAuto = $("#gAuto", el), gMic = $("#gMic", el);
   gAuto.checked = data.ajustes.tempoAuto !== false; gMic.checked = data.ajustes.calificarMic !== false;
