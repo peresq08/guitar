@@ -1,4 +1,4 @@
-import { data, onChange, streak, practiceDays, dayKey, $, $$ } from "./store.js";
+import { data, onChange, streak, practiceDays, dayKey, applyLane, $, $$ } from "./store.js";
 import { currentLevel, ensureSongs } from "./plan.js";
 import * as A from "./audio.js";
 import * as hoy from "./views/hoy.js";
@@ -45,7 +45,7 @@ document.addEventListener("keydown", e => {
   }
 });
 
-ensureSongs();
+ensureSongs(); applyLane();
 A.mic.echo = data.ajustes.eco !== false; A.setSensitivity(data.ajustes.micSens || "media");
 for (const [k, v] of Object.entries(VIEWS)) v.mount($("#v-" + k));
 header();

@@ -1,4 +1,4 @@
-import { data, save, streak, bestStreak, dayKey, minutesOn, exportJSON, importJSON, toast, esc, $ } from "../store.js";
+import { data, save, streak, bestStreak, dayKey, minutesOn, exportJSON, importJSON, toast, esc, applyLane, $ } from "../store.js";
 import { PATTERNS } from "./rasgueo.js";
 const PATS = Object.fromEntries(PATTERNS.map(p => [p.id, p.nombre]));
 import { LEVELS, goalDone, toggleGoal, currentLevel, levelProgress } from "../plan.js";
@@ -80,6 +80,8 @@ function render() {
       <span class="note">${Object.keys(data.calibracion || {}).length ? `Acordes calibrados: ${Object.keys(data.calibracion).join(", ")}.` : "Ningún acorde calibrado."} ${data.ajustes.latenciaMic != null ? `Retraso del micrófono: ${Math.round(data.ajustes.latenciaMic * 1000)} ms.` : "Ritmo sin calibrar."} Se guarda en este dispositivo y viaja en el respaldo.</span>
       ${Object.keys(data.calibracion || {}).length || data.ajustes.latenciaMic != null ? `<button class="btn small ghost" id="calReset" style="align-self:flex-start">Borrar toda la calibración</button>` : ""}
     </div>
+    <label class="field" for="laneSize">Tamaño del carril y de la tab<select id="laneSize">
+      <option value="normal">Normal</option><option value="grande">Grande</option><option value="enorme">Enorme</option></select></label>
     <label class="field" for="theme">Apariencia<select id="theme">
       <option value="">Igual que el sistema</option><option value="light">Clara</option><option value="dark">Oscura</option></select></label>
     <p class="note">Tus datos viven en este dispositivo. Descarga un respaldo para pasarlos a otro teléfono o computadora, o para no perderlos si borras el navegador.</p>
@@ -161,6 +163,8 @@ function bind() {
     if (!calArmed) { calArmed = true; e.target.textContent = "¿Seguro? Toca otra vez"; setTimeout(() => { calArmed = false; if (e.target.isConnected) e.target.textContent = "Borrar toda la calibración"; }, 3000); return; }
     data.calibracion = {}; delete data.ajustes.latenciaMic; save(); toast("Calibración borrada");
   });
+  const ls = $("#laneSize", root); ls.value = data.ajustes.carril || "normal";
+  ls.onchange = () => { data.ajustes.carril = ls.value; applyLane(); save(); };
   const th = $("#theme", root); th.value = getTheme();
   th.onchange = () => { try { localStorage.setItem("riff-theme", th.value); } catch (e) {} applyTheme(); };
   $("#bExp", root).onclick = () => {

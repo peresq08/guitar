@@ -94,11 +94,21 @@ En **Practicar → Tabs** importas una tab y la aprendes nota por nota:
 - **Archivos de Guitar Pro** (.gp, .gp3, .gp4, .gp5, .gpx) **y MusicXML**: traen cada nota con su cuerda, traste, duración, tempo y secciones (Intro, Verso, Solo…). Si el archivo tiene varias pistas, eliges cuál (la app sugiere la guitarra principal). El lector es [alphaTab](https://alphatab.net) (MPL-2.0); se descarga la primera vez que importas y después funciona sin conexión.
 - **Tabs de texto**: copia la tab de una página (los renglones `e|--0--3--|`) y pégala. Detecta afinación por las etiquetas, compases, secciones como `[Intro]`, ligados (h, p), slides, bends y notas muertas.
 - **Aprender**: la tab se ve como pentagrama que se desliza solo, con la nota actual en ámbar y un diapasón con la posición de esta nota y la siguiente. Al escuchar la nota correcta por el micrófono avanza (si repites la misma nota, espera un ataque nuevo); con acordes compara todas las notas a la vez. Al terminar la sección te dice tu paso (segundos por nota) y qué notas te costaron.
-- **Escuchar** toca la sección al 50, 75 o 100% de velocidad, y tocar el número grande repite la nota actual.
-- Si la tab está en otra afinación (por ejemplo, medio tono abajo) y tu guitarra está en estándar, elige *Guitarra en afinación estándar* y la app ajusta lo que espera escuchar.
+- **Con tempo**: un compás de entrada y la tab avanza al tempo, con una línea de "ahora" que recorre la tablatura. Con el micrófono, cada nota se pinta en verde (a tiempo), naranja (tarde, temprano o sin ataque claro), rojo (equivocada) o gris (sin tocar). Empieza al 60% de la velocidad original y, con *Subir la velocidad sola*, sube 5% cada vuelta con 90% o más y baja si sale mal. Al terminar te dice qué compás te costó, con un botón para aprenderlo nota por nota.
+- **Velocidad** de 30 a 120% (− / +), igual para Escuchar y Con tempo; se guarda por sección.
+- **Acompañamiento** (botón *Pistas*): con archivos de Guitar Pro, las demás pistas (otras guitarras, bajo, batería y voz como melodía) suenan contigo al escuchar y al tocar con tempo. Eliges cuáles y el volumen. Con micrófono, mejor usar audífonos.
+- **Formas de acorde**: cuando las notas de una parte caben en una forma de acorde (aunque se toquen una a la vez), la tab muestra el nombre arriba (por ejemplo **C**) y la tarjeta dice "Mano en forma de C", con la forma completa marcada en el diapasón. Reconoce los acordes abiertos de la biblioteca, cejillas tipo Mi y tipo La, y power chords.
+- **Técnicas visibles**: arcos con *h* y *p* para hammer-on y pull-off, líneas *sl.* para slides, flechas de bend, ondas de vibrato, *P.M.* con línea punteada para palm mute, × para notas muertas, <12> para armónicos y (5) para notas de adorno.
+- **Volver al inicio** de la sección y **ver la tab completa** (renglones como impresa, con la sección resaltada; toca una nota para ir a ella), con los botones sobre la tab.
+- **Escuchar** toca la sección a la velocidad elegida, y tocar el número grande repite la nota actual.
+- Si la tab está en otra afinación (por ejemplo, medio tono abajo) y tu guitarra está en estándar, elígelo en **Ajustes** (botón de controles) y la app ajusta lo que espera escuchar.
 - Incluye cuatro ejercicios: pentatónica de La menor, arpegios, un riff en Mi y ligados.
 
 Las tabs importadas se guardan **solo en tu dispositivo** (no están en este repositorio ni se suben a ningún lado) y viajan en el respaldo de Progreso.
+
+## Carril más grande
+
+El botón **A+** en el carril (Cambios, Secuencias, Rasgueo) y en la tab cambia entre tamaño normal, grande y enorme. También está en **Progreso → Ajustes**. En pantallas bajas, los tamaños grandes pueden requerir desplazar un poco el panel.
 
 ## Bocinas y eco
 

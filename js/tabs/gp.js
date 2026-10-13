@@ -87,3 +87,25 @@ export function trackToTab(score, i) {
     notas: ev.reduce((a, e) => a + e.n.length, 0),
   };
 }
+
+// Las demás pistas del archivo, simplificadas para tocarlas como acompañamiento:
+// { nombre, tipo: guitarra | bajo | bateria | voz | teclado, vol (0–1), ev: [[tick, duración, [midi…]], …] }
+export function tracksForBacking(score) {
+  return score.tracks.map((tr, i) => {
+    const st = tr.staves[0]; if (!st) return null;
+    const prog = tr.playbackInfo?.program ?? 0, name = tr.name || `Pista ${i + 1}`;
+    const tipo = st.isPercussion ? "bateria"
+      : (prog >= 32 && prog <= 39) || /bass|bajo/i.test(name) ? "bajo"
+      : (prog >= 52 && prog <= 54) || (prog >= 80 && prog <= 87) || /voice|voz|vocal|voc\b/i.test(name) ? "voz"
+      : prog <= 7 || (prog >= 16 && prog <= 23) ? "teclado" : "guitarra";
+    const ev = [];
+    for (const bar of st.bars) for (const v of bar.voices) for (const b of v.beats) {
+      if (b.isRest || !b.notes.length) continue;
+      const ms = b.notes.filter(n => !n.isTieDestination && !(n.isDead && !st.isPercussion)).map(n => n.realValue).filter(m => m > 0 && m < 128);
+      if (ms.length) ev.push([b.absolutePlaybackStart, b.playbackDuration, ms]);
+    }
+    if (!ev.length) return null;
+    ev.sort((a, b) => a[0] - b[0]);
+    return { i, nombre: name, tipo, vol: Math.max(.2, Math.min(1, (tr.playbackInfo?.volume ?? 13) / 16)), ev };
+  }).filter(Boolean);
+}

@@ -44,6 +44,15 @@ export function save() {
 }
 export function onChange(fn) { listeners.add(fn); }
 
+// Tamaño de los carriles y de la tab (para verlos de lejos): normal, grande o enorme
+export const LANES = { normal: 1, grande: 1.3, enorme: 1.6 };
+export const laneScale = () => LANES[data.ajustes.carril] || 1;
+export function applyLane() { document.documentElement.dataset.lane = LANES[data.ajustes.carril] ? data.ajustes.carril : "normal"; }
+export function cycleLane() {
+  const ks = Object.keys(LANES), k = ks[(ks.indexOf(data.ajustes.carril || "normal") + 1) % ks.length];
+  data.ajustes.carril = k; applyLane(); save(); toast(`Carril ${k}`);
+}
+
 // Tabs importadas: van en su propia llave porque pueden pesar más que el resto de los datos.
 // Se quedan en este dispositivo (no se suben a ningún lado) y viajan en el respaldo.
 const TKEY = "riff-tabs";

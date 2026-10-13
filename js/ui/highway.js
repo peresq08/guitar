@@ -2,6 +2,7 @@
 // a la izquierda, lo que ya pasó (30 s), pintado según el resultado. Abajo, una franja con lo que se escuchó.
 // Dibuja en canvas con requestAnimationFrame usando el reloj de audio.
 
+import { laneScale, cycleLane } from "../store.js";
 const NOW_FRAC = .6;
 
 export class Highway {
@@ -12,6 +13,9 @@ export class Highway {
     this.canvas = document.createElement("canvas"); this.canvas.setAttribute("role", "img");
     this.canvas.setAttribute("aria-label", "Carril: lo que viene a la derecha, lo que tocaste a la izquierda");
     this.wrap.appendChild(this.canvas); container.appendChild(this.wrap);
+    const zb = document.createElement("button"); zb.className = "lanesize"; zb.type = "button"; zb.textContent = "A+";
+    zb.title = "Cambiar el tamaño del carril"; zb.setAttribute("aria-label", "Cambiar el tamaño del carril");
+    zb.onclick = () => cycleLane(); this.wrap.appendChild(zb);
     this.colors = null; this.colorsAt = 0;
     new ResizeObserver(() => this.draw()).observe(this.wrap);
   }
@@ -56,7 +60,7 @@ export class Highway {
     const C = this.palette(), now = this.clock ? this.clock() : 0, nx = Math.round(w * NOW_FRAC);
     const PAST = this.past, FUTURE = this.future;
     const X = t => t <= now ? nx - (now - t) / PAST * nx : nx + (t - now) / FUTURE * (w - nx);
-    const laneA = { y: 20, h: h - 20 - 28 }, laneB = { y: h - 21, h: 13 };
+    const k = laneScale(), laneA = { y: 20, h: h - 20 - 28 }, laneB = { y: h - 21, h: 13 };
     const DISPLAY = '"Big Shoulders Display", "Barlow Condensed", system-ui, sans-serif';
     // Fondo: pasado apagado a la izquierda, futuro con un leve brillo hacia la línea
     let bg = g.createLinearGradient(0, 0, w, 0);
@@ -97,7 +101,7 @@ export class Highway {
         g.fillStyle = "rgba(255,255,255,.06)"; roundRect(g, x + 1, laneA.y + 1, Math.max(0, ww - 2), 6, 6); g.fill();
         if (ww > 18) {
           g.fillStyle = col && it.status !== "miss" ? "#fff" : cur ? "#fff" : C.ink; g.textAlign = "center";
-          const fs = past ? 14 : cur ? 22 : 20, hasStrums = this.strums && this.strums.length;
+          const fs = (past ? 14 : cur ? 22 : 20) * k, hasStrums = this.strums && this.strums.length;
           g.font = `800 ${fs}px ${DISPLAY}`;
           g.fillText(it.label, x + ww / 2, laneA.y + (hasStrums ? laneA.h * .36 : laneA.h / 2) + 1, ww - 6);
         }
@@ -105,14 +109,14 @@ export class Highway {
       }
       // Rasgueo: flechas pequeñas en la parte baja de los bloques
       if (this.strums && this.strums.length) {
-        const ys = laneA.y + laneA.h - 11;
+        const ys = laneA.y + laneA.h - 11 * k;
         g.textAlign = "center";
         for (const st of this.strums) {
           const x = X(st.t); if (x < 4 || x > w - 4) continue;
           const past = st.t <= now, near = Math.abs(st.t - now) < .09;
           g.globalAlpha = past ? .45 * fade(x) : 1;
           g.fillStyle = near ? C.accent : st.sym === "✕" ? C.warn : st.acc ? "#fff" : "rgba(255,255,255,.75)";
-          g.font = `${st.acc ? 800 : 600} ${st.acc ? 13 : 11}px system-ui, sans-serif`;
+          g.font = `${st.acc ? 800 : 600} ${(st.acc ? 13 : 11) * k}px system-ui, sans-serif`;
           g.fillText(st.sym, x, ys);
         }
         g.globalAlpha = 1;
@@ -121,7 +125,7 @@ export class Highway {
       const yc = laneA.y + laneA.h / 2;
       for (const it of this.items) {
         const x = X(it.t); if (x < -12 || x > w + 12) continue;
-        const col = colorOf(it.status), r = it.acc ? 9 : 7.5, past = it.t <= now;
+        const col = colorOf(it.status), r = (it.acc ? 9 : 7.5) * k, past = it.t <= now;
         g.globalAlpha = fade(x);
         g.beginPath(); g.arc(x, yc, r, 0, Math.PI * 2);
         if (col) { g.fillStyle = col; g.shadowColor = col; g.shadowBlur = it.status === "ok" ? 10 : 0; }
@@ -129,7 +133,7 @@ export class Highway {
         g.fill(); g.shadowBlur = 0;
         g.lineWidth = 1.5; g.strokeStyle = col ? "rgba(255,255,255,.25)" : it.acc ? C.accent : "rgba(255,255,255,.3)"; g.stroke();
         g.fillStyle = col ? "#fff" : it.sym === "✕" ? C.warn : C.ink; g.textAlign = "center";
-        g.font = `700 ${it.sym === "✕" ? 10 : 12}px system-ui, sans-serif`; g.fillText(it.sym, x, yc + .5);
+        g.font = `700 ${(it.sym === "✕" ? 10 : 12) * k}px system-ui, sans-serif`; g.fillText(it.sym, x, yc + .5);
         g.globalAlpha = 1;
       }
     }
