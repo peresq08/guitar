@@ -7,6 +7,8 @@ let root, loop = null, lock = -1, hist = [], okSince = 0;
 export function mount(el) {
   root = el;
   el.innerHTML = `
+  <div class="cols" style="--cols:minmax(0,1.5fr) minmax(0,1fr)">
+  <div class="col">
   <div class="panel tuner">
     <div class="label">Afinación estándar · E A D G B e</div>
     <svg viewBox="0 0 300 170" aria-hidden="true">
@@ -22,13 +24,17 @@ export function mount(el) {
     <div class="num muted" id="tInfo">Activa el micrófono y toca una cuerda</div>
     <div class="strings" id="tStrings">${STD.map((m, i) => `<button data-s="${i}" aria-label="Cuerda ${6 - i}, ${STRING_NAMES[i]}">${STRING_NAMES[i]}</button>`).join("")}</div>
     <p class="note" id="tHint">Detecta la cuerda sola. Toca una cuerda de arriba para fijarla y escuchar su tono de referencia.</p>
-    <button class="btn primary block" id="tStart">Activar afinador</button>
+    <button class="btn primary block" id="tStart" data-primary>Activar afinador</button>
   </div>
+  </div>
+  <div class="col">
   <div class="panel">
     <div class="row between">
       <label class="field" for="tA4" style="flex:1">Referencia La4 (Hz)<input type="number" id="tA4" min="430" max="450" value="${data.ajustes.a4}"></label>
     </div>
     <p class="note">Deja 440 Hz salvo que toques junto a una grabación afinada distinto.</p>
+  </div>
+  </div>
   </div>`;
   $("#tStart", el).onclick = start;
   $("#tA4", el).onchange = e => { const v = Math.min(450, Math.max(430, +e.target.value || 440)); data.ajustes.a4 = v; save(); };

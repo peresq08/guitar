@@ -101,7 +101,9 @@ export function buildRoutine(total = data.ajustes.rutinaMin || 30, l = currentLe
         ? "Pentatónica menor caja 1 en La (traste 5), subiendo y bajando con púa alternada. Empieza a 60 BPM."
         : "Ejercicio cromático 1-2-3-4 en cada cuerda, trastes 1 al 4 y de regreso. Lento, limpio y con púa alternada.", tool: l.scale ? null : "metro" },
     { n: "Acordes del nivel", w: 5, tip: "Arma cada acorde, toca cuerda por cuerda y corrige las que suenen apagadas. Luego cuatro rasgueos de cada uno.", chords: l.chords },
-    { n: "Cambios en un minuto", w: 5, tip: `Haz dos o tres retos con ${pair}. Tu récord actual es ${bestFor(pair)}.`, tool: "cambios", pair: l.pair },
+    bestFor(pair)
+      ? { n: "Cambios con tempo", w: 5, tip: `Dos o tres rondas de ${pair} con el clic. El tempo sube solo cuando tus cambios salen limpios. Récord actual: ${bestFor(pair)}.`, tool: "cambios", pair: l.pair, mode: "guia" }
+      : { n: "Cambios en un minuto", w: 5, tip: `Haz un reto libre con ${pair} para medir tu punto de partida; luego el entrenador con clic ajustará el tempo por ti.`, tool: "cambios", pair: l.pair, mode: "libre" },
     l.scale
       ? { n: "Improvisación", w: 7, tip: "Abre Jam, elige Rock en Mi menor o Blues en La e improvisa con la pentatónica. Busca frases cortas y deja silencios.", tool: "jam" }
       : l.power

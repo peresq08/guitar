@@ -8,7 +8,7 @@ const sub = {};
 export function mount(el) {
   root = el;
   el.innerHTML = `
-  <div class="seg" role="tablist" aria-label="Herramientas">
+  <div class="seg subtabs" role="tablist" aria-label="Herramientas">
     <button role="tab" data-sub="cambios">Cambios</button>
     <button role="tab" data-sub="metro">Metrónomo</button>
     <button role="tab" data-sub="jam">Jam</button>
@@ -28,6 +28,7 @@ function setSub(t) {
 export function onShow(opts = {}) {
   if (opts.tab) setSub(opts.tab);
   if (opts.pair && CHORDS[opts.pair[0]] && CHORDS[opts.pair[1]]) setPair(opts.pair[0], opts.pair[1]);
+  if (opts.mode && !C.run) setMode(opts.mode);
 }
 export function refresh() { renderCambiosStats(); }
 
@@ -41,6 +42,8 @@ function mountCambios(el) {
   cel = el;
   const opts = Object.keys(CHORDS).map(c => `<option>${esc(c)}</option>`).join("");
   el.innerHTML = `
+  <div class="cols" style="--cols:minmax(0,1.35fr) minmax(0,1fr)">
+  <div class="col">
   <div class="panel">
     <div><div class="label">Reto de un minuto</div><h2>¿Cuántos cambios limpios logras en 60 segundos?</h2></div>
     <div class="row" style="flex-wrap:nowrap">
@@ -53,9 +56,13 @@ function mountCambios(el) {
       <button role="radio" data-mode="mic">Escuchar</button>
     </div>
     <p class="note" id="modeNote"></p>
-    <div class="grid2" id="guiaCfg" hidden>
-      <label for="gBpm">Tempo (BPM)<input type="number" id="gBpm" value="60" min="30" max="200"></label>
-      <label for="gPer">Cambia cada<select id="gPer"><option value="4">4 tiempos</option><option value="2">2 tiempos</option><option value="1">1 tiempo</option></select></label>
+    <div class="stack" id="guiaCfg" hidden style="gap:12px">
+      <label class="switch"><input type="checkbox" id="gAuto" checked> Tempo automático: sube conforme mejoras</label>
+      <div class="grid2" id="gManual" hidden>
+        <label for="gBpm">Tempo (BPM)<input type="number" id="gBpm" value="60" min="30" max="200"></label>
+        <label for="gPer">Cambia cada<select id="gPer"><option value="4">4 tiempos</option><option value="2">2 tiempos</option><option value="1">1 tiempo</option></select></label>
+      </div>
+      <label class="switch"><input type="checkbox" id="gMic"> Calificar con el micrófono</label>
     </div>
     <div class="stack" id="micCfg" hidden style="padding:12px;border:1px solid var(--line);border-radius:10px;gap:10px">
       <div class="row"><button class="btn small" id="micBtn">Activar micrófono</button><span class="note" id="micStatus">El navegador te pedirá permiso.</span></div>
@@ -71,16 +78,21 @@ function mountCambios(el) {
       <p class="note">Calibra cada acorde una vez: rasguéalo 3 segundos con tu guitarra y en tu cuarto. Mejora mucho la detección, sobre todo en pares parecidos como D y Dm.</p>
     </div>
     <div class="stage" id="stage" aria-live="polite"><span class="lab" id="stLab">Listo</span><span class="big" id="stNum">60</span><span class="sub" id="stSub"></span></div>
-    <button class="btn primary block" id="cStart">Empezar reto</button>
+    <button class="btn primary block" id="cStart" data-primary>Empezar reto</button>
     <div class="panel hl" id="cResult" hidden>
       <div class="label" id="resLabel"></div>
       <div class="stepper"><button class="icon-btn" id="rMinus" aria-label="Uno menos">−</button><input type="number" id="resN" min="0" max="300" value="0" aria-label="Cambios"><button class="icon-btn" id="rPlus" aria-label="Uno más">+</button></div>
       <div class="row"><button class="btn primary" id="resSave">Guardar</button><button class="btn" id="resDrop">Descartar</button></div>
     </div>
   </div>
+  </div>
+  <div class="col">
+  <div class="panel" id="gTrainerPanel" hidden><div class="stack" id="gTrainer" style="gap:10px"></div></div>
   <div class="panel">
     <div class="row between"><div class="label">Tu avance con este par</div><span class="chip acc" id="cBest"></span></div>
     <div class="chart" id="cChart"></div>
+  </div>
+  </div>
   </div>`;
   let p = null; try { p = JSON.parse(localStorage.getItem("riff-par") || "null"); } catch (e) {}
   setPair(p ? p[0] : "Am", p ? p[1] : "E");
@@ -95,13 +107,63 @@ function mountCambios(el) {
     await A.measureNoise(1200); st.textContent = "Listo. Ruido de fondo medido.";
   };
   $("#calA", el).onclick = () => calibrate("A"); $("#calB", el).onclick = () => calibrate("B");
+  const gAuto = $("#gAuto", el), gMic = $("#gMic", el);
+  gAuto.checked = data.ajustes.tempoAuto !== false; gMic.checked = !!data.ajustes.calificarMic;
+  gAuto.onchange = () => { data.ajustes.tempoAuto = gAuto.checked; save(); renderTrainer(); };
+  gMic.onchange = () => { data.ajustes.calificarMic = gMic.checked; save(); renderTrainer(); };
   $("#cStart", el).onclick = startChallenge;
   const rn = $("#resN", el);
   $("#rMinus", el).onclick = () => rn.value = Math.max(0, (+rn.value || 0) - 1);
   $("#rPlus", el).onclick = () => rn.value = (+rn.value || 0) + 1;
   $("#resDrop", el).onclick = () => { $("#cResult", el).hidden = true; idle(); };
   $("#resSave", el).onclick = saveResult;
-  setMode("libre");
+  let m = "libre"; try { m = localStorage.getItem("riff-modo") || "libre"; } catch (e) {}
+  setMode(["libre", "guia", "mic"].includes(m) ? m : "libre");
+}
+
+/* ---- Entrenador de tempo ----
+   Mide la velocidad en cambios por minuto (cpm). El tempo y los tiempos por cambio se eligen
+   para que el clic quede en un rango cómodo (hasta 120 BPM): 20 cpm = 80 BPM cambiando cada 4 tiempos. */
+const clampCpm = v => Math.max(8, Math.min(120, Math.round(v)));
+export function tempoOf(cpm) { const per = cpm * 4 <= 120 ? 4 : cpm * 2 <= 120 ? 2 : 1; return { per, bpm: cpm * per }; }
+function trainer(k) {
+  const t = (data.entrenador || {})[k];
+  if (t) return t;
+  const best = bestFor(k);
+  return { cpm: best ? clampCpm(best * .75) : 20, hist: [], nuevo: true, base: best };
+}
+export function nextCpm(cpm, ratio) {
+  if (ratio >= .95) return clampCpm(cpm + Math.max(1, cpm * .1));
+  if (ratio >= .85) return clampCpm(cpm + Math.max(1, cpm * .05));
+  if (ratio < .7) return clampCpm(cpm - Math.max(1, cpm * .1));
+  return cpm;
+}
+function renderTrainer() {
+  if (!cel) return;
+  const auto = $("#gAuto", cel).checked;
+  $("#gManual", cel).hidden = auto; $("#gTrainerPanel", cel).hidden = !(auto && C.mode === "guia");
+  if (!C.run) idle();
+  if (!auto) return;
+  const k = pairKey(), t = trainer(k), { per, bpm } = tempoOf(t.cpm), h = (t.hist || []).slice(-20);
+  let spark = "";
+  if (h.length > 1) {
+    const W = 300, H = 56, max = Math.max(...h.map(x => x.cpm)) * 1.1, min = Math.min(...h.map(x => x.cpm)) * .9;
+    const xs = i => 4 + i * (W - 8) / (h.length - 1), ys = v => 6 + (H - 12) * (1 - (v - min) / Math.max(1, max - min));
+    const pts = h.map((x, i) => xs(i) + "," + ys(x.cpm)).join(" ");
+    spark = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="Historial de tempo">
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+      ${h.map((x, i) => `<circle cx="${xs(i)}" cy="${ys(x.cpm)}" r="3" fill="${x.ratio >= .85 ? "var(--good)" : x.ratio < .7 ? "var(--warn)" : "var(--muted)"}"/>`).join("")}</svg>
+      <p class="note">Cada punto es una ronda: verde subió el tempo, gris se mantuvo, naranja bajó.</p>`;
+  }
+  $("#gTrainer", cel).innerHTML = `
+    <div class="row between" style="align-items:flex-end">
+      <div><div class="label">Tu tempo de entrenamiento</div><div class="big" style="font-size:2.6rem">${bpm}<span style="font-size:1rem;color:var(--muted)"> BPM</span></div></div>
+      <div class="num" style="text-align:right;font-size:.9rem"><b>${t.cpm}</b> cambios/min<br><span class="muted">cada ${per} ${per === 1 ? "tiempo" : "tiempos"}</span></div>
+    </div>
+    ${spark}
+    <p class="note">${t.nuevo ? (t.base ? `Empiezas al 75% de tu récord (${t.base}) para que los cambios salgan limpios.` : "Aún no tienes récord con este par: empiezas en 20 cambios por minuto. Una ronda en Cuenta tú o Escuchar te da un punto de partida más exacto.") : "Sube si 85% o más de los cambios salen limpios, se mantiene entre 70 y 85%, y baja si salen menos del 70%."}</p>
+    ${t.nuevo ? "" : `<button class="btn small" id="gReset" style="align-self:flex-start">Volver a empezar desde mi récord</button>`}`;
+  $("#gReset", cel)?.addEventListener("click", () => { delete data.entrenador[k]; save(); renderTrainer(); toast("Tempo reiniciado desde tu récord"); });
 }
 function setPair(a, b) {
   $("#cA", cel).value = a; $("#cB", cel).value = b;
@@ -110,15 +172,16 @@ function setPair(a, b) {
   $("#mA", cel).textContent = a; $("#mB", cel).textContent = b;
   $("#calA", cel).textContent = (data.calibracion[a] ? "Recalibrar " : "Calibrar ") + a;
   $("#calB", cel).textContent = (data.calibracion[b] ? "Recalibrar " : "Calibrar ") + b;
-  renderCambiosStats();
+  renderCambiosStats(); renderTrainer();
 }
 function setMode(m) {
-  C.mode = m;
+  C.mode = m; try { localStorage.setItem("riff-modo", m); } catch (e) {}
   cel.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-checked", b.dataset.mode === m));
+  renderTrainer();
   $("#guiaCfg", cel).hidden = m !== "guia"; $("#micCfg", cel).hidden = m !== "mic";
   $("#modeNote", cel).textContent = {
     libre: "Cuenta los cambios en voz alta o mentalmente. Al terminar el minuto escribes el número.",
-    guia: "Un clic marca el tiempo y la pantalla te dice qué acorde sigue. Cuando todos salgan limpios, sube el tempo.",
+    guia: "Un clic marca el tiempo y la pantalla te dice qué acorde sigue. Con el tempo automático, la app lo sube o lo baja después de cada ronda según tus cambios limpios.",
     mic: "La app escucha tu guitarra y cuenta los cambios sola. Funciona mejor con acústica o sonido limpio, cerca del teléfono y sin ruido de fondo.",
   }[m];
   idle();
@@ -126,7 +189,12 @@ function setMode(m) {
 function idle() {
   $("#stage", cel).classList.remove("live"); $("#stLab", cel).textContent = "Listo";
   const n = $("#stNum", cel); n.className = "big"; n.textContent = "60";
-  $("#stSub", cel).textContent = "Tendrás 3 segundos para poner las manos en la guitarra";
+  let msg = "Tendrás 3 segundos para poner las manos en la guitarra";
+  if (C.mode === "guia" && $("#gAuto", cel)?.checked) {
+    const t = trainer(pairKey()), tp = tempoOf(t.cpm);
+    msg = `Tempo de hoy: ${tp.bpm} BPM, cambias cada ${tp.per} ${tp.per === 1 ? "tiempo" : "tiempos"} (${t.cpm} cambios/min)`;
+  }
+  $("#stSub", cel).textContent = msg;
 }
 function renderCambiosStats() {
   if (!cel) return;
@@ -207,12 +275,17 @@ function stop() { C.run = false; clearInterval(C.tick); A.keepAwake(false); $("#
 async function startChallenge() {
   const a = A.ctx(); if (!a) return;
   if (C.run) { stop(); D.det = null; idle(); return; }
-  if (C.mode === "mic" && !(await startMic())) return;
+  const listen = C.mode === "mic" || (C.mode === "guia" && $("#gMic", cel).checked);
+  if (listen && !(await startMic())) { if (C.mode === "guia") toast(A.mic.error || "No se pudo usar el micrófono"); return; }
   $("#cResult", cel).hidden = true;
-  C.run = true; C.t0 = a.currentTime + 3; C.bpm = Math.min(200, Math.max(30, +$("#gBpm", cel).value || 60)); C.per = +$("#gPer", cel).value;
+  C.run = true; C.t0 = a.currentTime + 3;
+  C.autoTempo = C.mode === "guia" && $("#gAuto", cel).checked;
+  if (C.autoTempo) { C.cpm = trainer(pairKey()).cpm; Object.assign(C, tempoOf(C.cpm)); }
+  else { C.bpm = Math.min(200, Math.max(30, +$("#gBpm", cel).value || 60)); C.per = +$("#gPer", cel).value; }
+  C.listen = listen;
   C.next = C.t0; C.k = 0; C.auto = 0; C.lastWarn = 0;
   [0, 1, 2].forEach(i => A.beep(800, .07, a.currentTime + i));
-  if (C.mode === "mic") {
+  if (listen) {
     const both = data.calibracion[$("#cA", cel).value] && data.calibracion[$("#cB", cel).value];
     setTimeout(() => { if (C.run) D.det = { cur: null, cand: null, cc: 0, lastT: 0, changes: 0, cleanN: 0, hold: 0, pending: false, clean: both ? .85 : .75 }; }, 3000);
   }
@@ -228,7 +301,7 @@ function tick() {
     while (C.next < now + .12 && C.next < C.t0 + 60) { A.click(C.k % C.per === 0, C.next); C.next += 60 / C.bpm; C.k++; }
     const idx = Math.floor(Math.floor(el / (60 / C.bpm)) / C.per);
     lab.textContent = `Quedan ${Math.ceil(left)} s`; num.className = "chordnow"; num.textContent = idx % 2 === 0 ? $("#cA", cel).value : $("#cB", cel).value;
-    subt.textContent = "Cambio " + idx; C.auto = idx;
+    subt.textContent = "Cambio " + idx; C.auto = Math.min(idx, Math.ceil(C.bpm / C.per) - 1);
   } else if (C.mode === "mic") {
     const d = D.det;
     lab.textContent = `Quedan ${Math.ceil(left)} s`; num.className = "chordnow";
@@ -247,7 +320,15 @@ function tick() {
       if (d.pending && d.hold >= d.clean) d.cleanN++;
       C.micRes = { changes: d.changes, clean: d.cleanN }; rn.value = d.changes;
       rl.textContent = `Detecté ${d.changes} cambios; ${d.cleanN} con el acorde sonando claro. Corrige el número si hace falta.`;
-    } else if (C.mode === "guia") { rn.value = C.auto; rl.textContent = `Hubo ${C.auto} cambios a ${C.bpm} BPM. ¿Cuántos salieron limpios?`; }
+    } else if (C.mode === "guia") {
+      C.micRes = null;
+      if (C.listen) {
+        const d = D.det || { changes: 0, cleanN: 0, pending: false }; D.det = null;
+        if (d.pending && d.hold >= d.clean) d.cleanN++;
+        const clean = Math.min(C.auto, d.cleanN); C.micRes = { changes: d.changes, clean };
+        rn.value = clean; rl.textContent = `El micrófono escuchó ${clean} de ${C.auto} cambios limpios a ${C.bpm} BPM. Corrige el número si hace falta.`;
+      } else { rn.value = C.auto; rl.textContent = `Hubo ${C.auto} cambios a ${C.bpm} BPM. ¿Cuántos salieron limpios?`; }
+    }
     else { rn.value = prev || 0; rl.textContent = "¿Cuántos cambios lograste?"; }
     $("#cResult", cel).hidden = false;
   }
@@ -257,9 +338,19 @@ function saveResult() {
   const rec = { par: k, n, t: new Date().toISOString(), modo: C.mode };
   if (C.mode === "guia") rec.bpm = C.bpm;
   if (C.mode === "mic" && C.micRes) rec.limpios = C.micRes.clean;
-  data.intentos.push(rec); save();
-  toast(n > prev ? (prev ? `¡Nuevo récord! Antes: ${prev}` : "Primer registro guardado") : `Guardado. Tu récord sigue en ${prev}`);
-  $("#cResult", cel).hidden = true; idle(); renderCambiosStats();
+  data.intentos.push(rec);
+  let msg = n > prev ? (prev ? `¡Nuevo récord! Antes: ${prev}` : "Primer registro guardado") : `Guardado. Tu récord sigue en ${prev}`;
+  if (C.mode === "guia" && C.autoTempo && C.auto > 0) {
+    const ratio = Math.min(1, n / C.auto), cpm = C.cpm, next = nextCpm(cpm, ratio), pct = Math.round(ratio * 100);
+    data.entrenador = data.entrenador || {};
+    const t = data.entrenador[k] || { cpm, hist: [] };
+    t.cpm = next; t.hist = [...(t.hist || []), { t: rec.t, cpm, ratio: Math.round(ratio * 100) / 100 }].slice(-60);
+    data.entrenador[k] = t;
+    const nb = tempoOf(next).bpm;
+    msg = next > cpm ? `${pct}% limpios. ¡Sube a ${nb} BPM!` : next < cpm ? `${pct}% limpios. Bajamos a ${nb} BPM para afianzar` : `${pct}% limpios. Repite a ${nb} BPM`;
+  }
+  save(); toast(msg);
+  $("#cResult", cel).hidden = true; idle(); renderCambiosStats(); renderTrainer();
 }
 
 /* =================== METRÓNOMO =================== */
@@ -268,6 +359,8 @@ let mel;
 function mountMetro(el) {
   mel = el;
   el.innerHTML = `
+  <div class="cols">
+  <div class="col">
   <div class="panel">
     <div class="row between" style="align-items:flex-end">
       <div><div class="label" id="mMeterLbl">Tempo · 4/4</div><div class="big"><span id="mBpm">80</span><span style="font-size:1.1rem;color:var(--muted)"> BPM</span></div></div>
@@ -282,8 +375,10 @@ function mountMetro(el) {
       <label for="mMeter">Compás<select id="mMeter"><option value="4">4/4</option><option value="3">3/4</option><option value="2">2/4</option><option value="6">6/8</option></select></label>
       <label for="mSub">Subdivisión<select id="mSub"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></label>
     </div>
-    <button class="btn primary block" id="mStart">Iniciar</button>
+    <button class="btn primary block" id="mStart" data-primary>Iniciar</button>
   </div>
+  </div>
+  <div class="col">
   <div class="panel">
     <label class="switch"><input type="checkbox" id="mProg"> Modo progresivo: sube el tempo solo</label>
     <div class="grid2" id="mProgCfg">
@@ -294,6 +389,8 @@ function mountMetro(el) {
     </div>
     <p class="note" id="mProgInfo"></p>
     <p class="note">Si fallas en un tempo, bájale 5 BPM y vuelve a subir. Tocar limpio importa más que tocar rápido.</p>
+  </div>
+  </div>
   </div>`;
   el.querySelectorAll("[data-d]").forEach(b => b.onclick = () => setBpm(M.bpm + +b.dataset.d));
   $("#mRange", el).oninput = e => setBpm(+e.target.value);
@@ -373,6 +470,8 @@ function chordPcs(ch) {
 function mountJam(el) {
   jel = el;
   el.innerHTML = `
+  <div class="cols" style="--cols:minmax(0,1fr) minmax(0,1.4fr)">
+  <div class="col">
   <div class="panel">
     <div><div class="label">Pista de acompañamiento</div><h2>Improvisa sobre una banda virtual</h2></div>
     <select id="jStyle" aria-label="Estilo">${STYLES.map(s => `<option value="${s.id}">${s.name}</option>`).join("")}</select>
@@ -387,12 +486,16 @@ function mountJam(el) {
       <label class="switch"><input type="checkbox" id="jBa" checked> Bajo</label>
       <label class="switch"><input type="checkbox" id="jGt" checked> Guitarra rítmica</label>
     </div>
-    <button class="btn primary block" id="jStart">Tocar</button>
+    <button class="btn primary block" id="jStart" data-primary>Tocar</button>
   </div>
+  </div>
+  <div class="col">
   <div class="panel">
     <div class="row between"><div class="label" id="jScaleName">Pentatónica menor</div><span class="chip acc" id="jKey"></span></div>
     <div class="fret-wrap" id="jFret"></div>
     <p class="note">Naranja: tónica, tu "casa". Verde: notas del acorde que está sonando; caer en ellas al final de una frase suena seguro.</p>
+  </div>
+  </div>
   </div>`;
   $("#jStyle", el).onchange = e => { J.st = STYLES.find(s => s.id === e.target.value); J.bpm = J.st.bpm; renderJam(); };
   el.querySelectorAll("[data-jd]").forEach(b => b.onclick = () => { J.bpm = Math.min(220, Math.max(40, J.bpm + +b.dataset.jd)); $("#jBpm", el).textContent = J.bpm; });

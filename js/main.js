@@ -31,6 +31,19 @@ window.addEventListener("riff:go", e => go(e.detail.view, e.detail.opts || {}));
 
 $$(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
 
+// Atajos de teclado (útiles en laptop): Espacio inicia o pausa lo principal de la vista; 1–5 cambian de sección.
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target, tag = t && t.tagName;
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || t?.isContentEditable) return;
+  const order = ["hoy", "practicar", "afinador", "acordes", "progreso"];
+  if (/^[1-5]$/.test(e.key)) { go(order[+e.key - 1]); e.preventDefault(); return; }
+  if (e.code === "Space" && !(tag === "BUTTON" || tag === "A" || tag === "SUMMARY")) {
+    const btn = [...document.querySelectorAll("#v-" + current + " [data-primary]")].find(b => b.offsetParent !== null && !b.disabled);
+    if (btn) { e.preventDefault(); btn.click(); }
+  }
+});
+
 ensureSongs();
 for (const [k, v] of Object.entries(VIEWS)) v.mount($("#v-" + k));
 header();

@@ -7,7 +7,7 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | Sección | Para qué sirve |
 |---|---|
 | **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel y el tiempo que tengas. |
-| **Practicar** | Reto de cambios de acorde (contando tú, con clic o escuchando por micrófono), metrónomo progresivo y Jam con batería y bajo. |
+| **Practicar** | Reto de cambios de acorde (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
 | **Acordes** | 35 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
 | **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de canciones, récords y respaldo de datos. |
@@ -21,6 +21,23 @@ La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 3. En uno o dos minutos la app queda en `https://peresq08.github.io/guitar/`.
 
 En el celular abre esa dirección y usa **Agregar a pantalla de inicio**.
+
+## En laptop
+
+En pantallas anchas el menú pasa a un costado y cada sección usa dos columnas. Atajos: **Espacio** inicia o pausa lo principal de la sección (rutina, reto, metrónomo, Jam, afinador) y **1–5** cambian de sección.
+
+## Entrenador de cambios
+
+En **Practicar → Cambios → Con clic**, con *Tempo automático* activado, la app arranca al 75% de tu récord con ese par de acordes. Después de cada ronda:
+
+| Cambios limpios | Siguiente ronda |
+|---|---|
+| 95% o más | +10% de velocidad |
+| 85–95% | +5% |
+| 70–85% | Se mantiene |
+| Menos de 70% | −10% |
+
+Puedes calificar tú o dejar que el micrófono cuente los cambios limpios.
 
 ## Consejos para el micrófono
 

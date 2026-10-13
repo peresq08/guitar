@@ -19,6 +19,8 @@ function render() {
   const c = CHORDS[sel];
   const r = (scaleKey - 4 + 12) % 12;
   root.innerHTML = `
+  <div class="cols">
+  <div class="col">
   <div class="panel">
     <div class="label">Biblioteca de acordes</div>
     <div class="seg wrap" role="tablist" aria-label="Tipo de acorde">
@@ -26,7 +28,9 @@ function render() {
     </div>
     <div class="lib">${names.map(n => diagram(n, { button: true }).replace('class="chord"', `class="chord" aria-pressed="${n === sel}"`)).join("")}</div>
   </div>
-  <div class="panel">
+  </div>
+  <div class="col">
+  <div class="panel sticky-d">
     <div class="row" style="align-items:flex-start;gap:16px">
       ${diagram(sel, { large: true })}
       <div class="stack" style="flex:1;min-width:160px">
@@ -40,6 +44,8 @@ function render() {
       </div>
     </div>
     ${tips(sel)}
+  </div>
+  </div>
   </div>
   <div class="panel">
     <div class="label">Escalas en el diapasón</div>

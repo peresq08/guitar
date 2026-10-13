@@ -21,6 +21,8 @@ function render() {
     <div class="stat"><b>${bestStreak()}</b><span>mejor racha</span></div>
   </div>
 
+  <div class="cols">
+  <div class="col">
   <div class="panel">
     <div class="row between"><div class="label">Minutos por día · últimas 2 semanas</div><span class="chip">${weekTotal()} min esta semana</span></div>
     <div class="chart">${dailyChart()}</div>
@@ -42,6 +44,8 @@ function render() {
         }).join("")}</div></details>`;
     }).join("")}
   </div>
+  </div>
+  <div class="col">
 
   <div class="panel" id="repertorio">
     <div class="label">Mi repertorio</div><div class="seg wrap" role="radiogroup" aria-label="Filtrar canciones" id="sFilt">
@@ -77,6 +81,8 @@ function render() {
       <label class="btn" for="bImp" style="cursor:pointer">Cargar respaldo</label>
       <input type="file" id="bImp" accept="application/json,.json" hidden>
     </div>
+  </div>
+  </div>
   </div>
   <p class="note" style="text-align:center">Riff · hecho a tu medida</p>`;
   bind();
