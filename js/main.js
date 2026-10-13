@@ -54,6 +54,18 @@ try { start = sessionStorage.getItem("riff-view") || "hoy"; } catch (e) {}
 const hash = location.hash.slice(1); if (VIEWS[hash]) start = hash;
 go(start);
 
+// Actualizaciones: busca versión nueva al abrir y al volver a la app; si llega una, recarga sola
+// (salvo que estés en plena práctica: entonces espera a que vuelvas a la app).
 if ("serviceWorker" in navigator && location.protocol === "https:") {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading) return;
+    const busy = document.querySelector('[data-primary]') && [...document.querySelectorAll('.stage.live')].length > 0;
+    if (busy) { document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && !reloading) { reloading = true; location.reload(); } }, { once: true }); return; }
+    reloading = true; location.reload();
+  });
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(reg => {
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+  }).catch(() => {});
 }
