@@ -140,7 +140,13 @@ function rawLevel() {
 }
 export function level() { const r = rawLevel(); track(r); return r; }
 export const norm = v => { let s = 0; for (const x of v) s += x * x; s = Math.sqrt(s) || 1; return Array.from(v, x => x / s); };
-export const cosSim = (a, b) => { let s = 0; for (let i = 0; i < 12; i++) s += a[i] * b[i]; return s; };
+// Similitud entre dos cromas comprimiendo la intensidad (raíz cuadrada): así las notas graves muy fuertes
+// no dominan y se distinguen mejor acordes que comparten notas, como C, Em y G.
+export const cosSim = (a, b) => {
+  let s = 0, na = 0, nb = 0;
+  for (let i = 0; i < 12; i++) { const x = Math.sqrt(Math.abs(a[i])), y = Math.sqrt(Math.abs(b[i])); s += x * y; na += x * x; nb += y * y; }
+  return na && nb ? s / Math.sqrt(na * nb) : 0;
+};
 export function chroma() {
   const rms = level(); mic.an.getFloatFrequencyData(mic.fb);
   const sr = ac.sampleRate, n = mic.an.fftSize, ch = new Array(12).fill(0);

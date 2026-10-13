@@ -237,3 +237,19 @@ kbd{font-family:var(--mono);font-size:.75rem;padding:1px 6px;border:1px solid va
   .lib{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
 }
 @media (min-width:1000px) and (hover:none){ .kbd-hint{display:none} }
+
+/* Secuencias */
+.prog-chords span small{font-family:var(--mono);font-size:.65rem;font-weight:500;opacity:.7;margin-left:4px;vertical-align:super}
+.seqlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.seqlist li{display:grid;grid-template-columns:22px minmax(56px,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.seqlist li b{font-family:var(--display);font-size:1.15rem}
+.seqlist select{min-height:36px;padding:4px 6px;font-size:.9rem}
+.icon-btn.sm{width:34px;height:34px;font-size:.95rem}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.subtabs button{padding-inline:6px}
+@media (max-width:420px){ .subtabs button{font-size:.86rem;letter-spacing:.02em} }
+@media (min-width:1000px){ .subtabs{max-width:560px} }
+.stage .beats{margin-top:6px}
+.stage .beats i{background:currentColor;opacity:.22}
+.stage .beats i.on{background:currentColor;opacity:1;transform:scale(1.15)}
+.stage .beats i.acc:not(.on){opacity:.4}

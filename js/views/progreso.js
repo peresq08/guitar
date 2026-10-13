@@ -96,7 +96,7 @@ function songsHTML() {
   return list.slice().sort((a, b) => order[a.estado] - order[b.estado] || (a.nivel || 1) - (b.nivel || 1)).map(s => `
     <div class="songrow">
       <div style="min-width:0"><div class="t">${esc(s.titulo)}</div><div class="a">${esc(s.artista)} · nivel ${s.nivel || 1}${s.bpmMeta ? ` · ${s.bpmMeta} BPM` : ""}</div>
-        <a class="note" href="https://www.songsterr.com/?pattern=${encodeURIComponent(s.titulo + " " + s.artista)}" target="_blank" rel="noopener">Tablatura</a></div>
+        <span class="row" style="gap:12px"><a class="note" href="https://www.songsterr.com/?pattern=${encodeURIComponent(s.titulo + " " + s.artista)}" target="_blank" rel="noopener">Tablatura</a>${(data.secuencias || []).find(q => q.cancion === s.id && q.acordes.length > 1) ? `<a class="note" href="#" data-seq="${(data.secuencias || []).find(q => q.cancion === s.id).id}">Practicar acordes</a>` : ""}</span></div>
       <div class="row" style="flex-wrap:nowrap">
         <select data-song="${s.id}" aria-label="Estado de ${esc(s.titulo)}" style="min-height:38px;padding:6px">${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${s.estado === k ? "selected" : ""}>${v}</option>`).join("")}</select>
         <button class="icon-btn" data-del="${s.id}" aria-label="Quitar ${esc(s.titulo)}" style="width:38px;height:38px;font-size:1rem">✕</button>
@@ -131,6 +131,7 @@ function dailyChart() {
 function bind() {
   root.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => toggleGoal(b.dataset.goal));
   root.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filt = b.dataset.f; render(); setTimeout(() => $("#repertorio", root).scrollIntoView({ block: "start" }), 0); });
+  root.querySelectorAll("[data-seq]").forEach(a => a.onclick = e => { e.preventDefault(); window.dispatchEvent(new CustomEvent("riff:go", { detail: { view: "practicar", opts: { tab: "secuencia", seq: a.dataset.seq } } })); });
   root.querySelectorAll("[data-song]").forEach(s => s.onchange = () => {
     const song = data.canciones.find(x => x.id === s.dataset.song); song.estado = s.value; save();
     if (s.value === "dominada") toast(`¡${song.titulo} dominada!`);

@@ -5,6 +5,7 @@ import { chime, ctx, keepAwake } from "../audio.js";
 
 let root, mini;
 const R = { blocks: [], i: 0, left: 0, run: false, last: 0, done: [], practiced: 0, tick: null, finished: false };
+const seqFor = song => song && (data.secuencias || []).find(q => q.cancion === song.id && q.acordes.length > 1);
 const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 const goTo = (view, opts) => window.dispatchEvent(new CustomEvent("riff:go", { detail: { view, opts } }));
 
@@ -49,7 +50,7 @@ function render() {
     <div class="bar"><div id="hBar" style="width:${100 * (1 - R.left / (b.min * 60))}%"></div></div>
     <div class="player">
       ${b.song ? `<div class="song"><div class="label">Canción del día</div><h3>${esc(b.song.titulo)}</h3><span class="muted">${esc(b.song.artista)}${b.song.bpmMeta ? ` · tempo meta ${b.song.bpmMeta} BPM` : ""}</span><p>${esc(b.song.tip || b.song.notas || "Tócala junto a la grabación. Si una parte cuesta, aíslala y repítela lento.")}</p>
-        <div class="row"><a class="btn small" href="https://www.songsterr.com/?pattern=${encodeURIComponent(b.song.titulo + " " + b.song.artista)}" target="_blank" rel="noopener">Ver tablatura</a></div></div>` : `<p>${esc(b.tip)}</p>`}
+        <div class="row"><a class="btn small" href="https://www.songsterr.com/?pattern=${encodeURIComponent(b.song.titulo + " " + b.song.artista)}" target="_blank" rel="noopener">Ver tablatura</a>${seqFor(b.song) ? `<button class="btn small primary" id="hSeq">Practicar sus acordes</button>` : ""}</div></div>` : `<p>${esc(b.tip)}</p>`}
       ${b.chords ? `<div class="chords">${b.chords.map(c => diagram(c)).join("")}</div>` : ""}
       ${b.tool ? `<button class="btn small" id="hTool" style="align-self:flex-start">${{ cambios: "Abrir reto de cambios", metro: "Abrir metrónomo", jam: "Abrir Jam" }[b.tool]}</button>` : ""}
     </div>`}
@@ -102,6 +103,7 @@ function render() {
 function bind() {
   $("#hViewPlan", root).onclick = () => goTo("progreso", { focus: "camino" });
   const b = R.blocks[R.i];
+  $("#hSeq", root)?.addEventListener("click", () => goTo("practicar", { tab: "secuencia", seq: seqFor(b.song).id }));
   $("#hTool", root)?.addEventListener("click", () => goTo("practicar", { tab: b.tool, pair: b.pair, mode: b.mode }));
   $("#hStart", root)?.addEventListener("click", () => {
     ctx();

@@ -1,6 +1,8 @@
 import { data, save, bestFor, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram, fretboard, NOTES } from "../chords.js";
 import * as A from "../audio.js";
+import { chordTemplate, LAB_MIN, LAB_DIFF } from "../detect.js";
+import { mountSecuencias, showSecuencia } from "./secuencias.js";
 
 let root, tab = "cambios";
 const sub = {};
@@ -10,27 +12,32 @@ export function mount(el) {
   el.innerHTML = `
   <div class="seg subtabs" role="tablist" aria-label="Herramientas">
     <button role="tab" data-sub="cambios">Cambios</button>
+    <button role="tab" data-sub="secuencia">Secuencias</button>
     <button role="tab" data-sub="metro">Metrónomo</button>
     <button role="tab" data-sub="jam">Jam</button>
   </div>
   <div id="p-cambios" class="stack" style="gap:16px"></div>
+  <div id="p-secuencia" class="stack" style="gap:16px" hidden></div>
   <div id="p-metro" class="stack" style="gap:16px" hidden></div>
   <div id="p-jam" class="stack" style="gap:16px" hidden></div>`;
   el.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => setSub(b.dataset.sub));
-  mountCambios($("#p-cambios", el)); mountMetro($("#p-metro", el)); mountJam($("#p-jam", el));
+  mountCambios($("#p-cambios", el)); mountSecuencias($("#p-secuencia", el)); mountMetro($("#p-metro", el)); mountJam($("#p-jam", el));
   setSub("cambios");
 }
 function setSub(t) {
   tab = t;
   root.querySelectorAll("[data-sub]").forEach(b => b.setAttribute("aria-selected", b.dataset.sub === t));
-  ["cambios", "metro", "jam"].forEach(k => $("#p-" + k, root).hidden = k !== t);
+  ["cambios", "secuencia", "metro", "jam"].forEach(k => $("#p-" + k, root).hidden = k !== t);
 }
 export function onShow(opts = {}) {
   if (opts.tab) setSub(opts.tab);
   if (opts.pair && CHORDS[opts.pair[0]] && CHORDS[opts.pair[1]]) setPair(opts.pair[0], opts.pair[1]);
   if (opts.mode && !C.run) setMode(opts.mode);
+  if (opts.seq) showSecuencia(opts.seq);
 }
 export function refresh() { renderCambiosStats(); }
+export const stopOthers = () => { stopMetro(); stopJam(); };
+window.addEventListener("riff:stop-audio", () => { stopMetro(); stopJam(); });
 
 /* =================== CAMBIOS =================== */
 const C = { mode: "libre", run: false, tick: null, t0: 0, next: 0, k: 0, auto: 0, bpm: 60, per: 4, lastWarn: 0, micRes: null };
@@ -216,13 +223,7 @@ function renderCambiosStats() {
 }
 
 /* Detección por micrófono */
-function theoTpl(name) {
-  const v = new Array(12).fill(0);
-  [...CHORDS[name].f].forEach((c, i) => { if (c === "x") return; const m = A.TUNING[i] + +c; v[m % 12] += 1; v[(m + 7) % 12] += .3; v[(m + 4) % 12] += .1; });
-  return A.norm(v);
-}
-const tpl = n => data.calibracion[n] || theoTpl(n);
-const LAB_MIN = .55, LAB_DIFF = .04;
+const tpl = chordTemplate;
 async function startMic() {
   const st = $("#micStatus", cel);
   if (A.mic.an) return true;
@@ -437,7 +438,7 @@ function toggleMetro() {
   const a = A.ctx(); if (!a) return;
   if (M.run) { M.run = false; clearInterval(M.timer); A.keepAwake(false); $("#mStart", mel).textContent = "Iniciar"; mel.querySelectorAll("#mBeats i").forEach(e => e.classList.remove("on")); progInfo(); return; }
   if ($("#mProg", mel).checked) setBpm(pcfg().ini);
-  stopJam();
+  stopJam(); window.dispatchEvent(new Event("riff:stop-seq"));
   Object.assign(M, { run: true, beat: 0, sub: 0, bars: 0, next: a.currentTime + .06 });
   M.timer = setInterval(schedule, 25); A.keepAwake(true); $("#mStart", mel).textContent = "Detener"; progInfo();
 }
@@ -539,7 +540,7 @@ function jamSchedule() {
 function toggleJam() {
   const a = A.ctx(); if (!a) return;
   if (J.run) { stopJam(); return; }
-  stopMetro();
+  stopMetro(); window.dispatchEvent(new Event("riff:stop-seq"));
   Object.assign(J, { run: true, step: 0, bar: 0, next: a.currentTime + .1, startedAt: performance.now() });
   J.timer = setInterval(jamSchedule, 25); A.keepAwake(true); $("#jStart", jel).textContent = "Detener";
 }
