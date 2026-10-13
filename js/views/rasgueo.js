@@ -70,7 +70,7 @@ export function mountRasgueo(container) {
       <label class="chip-toggle"><input type="checkbox" id="rgGuide" checked> Sonido guía</label>
       <label class="chip-toggle" id="rgRampRow"><input type="checkbox" id="rgRamp"> +2 BPM cada 4 compases</label>
       <label class="chip-toggle"><input type="checkbox" id="rgMic"> Calificar con micrófono</label>
-      <button class="btn small ghost" id="rgCal">Micrófono y calibración</button>
+      <button class="btn small ghost" id="rgCal">Micrófono</button>
       <button class="btn primary" id="rgStart" data-primary>Empezar</button>
     </div>
    </div>

@@ -10,7 +10,7 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
 | **Acordes** | 43 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 53 canciones de rock, pop, metal, grunge, reggae y country (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
+| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 64 canciones de rock, pop, metal, grunge, reggae y country (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 
@@ -63,6 +63,12 @@ En **Practicar → Cambios → Con clic**, con *Tempo automático* activado, la 
 Puedes calificar tú o dejar que el micrófono cuente los cambios limpios.
 
 ## Secuencias de acordes
+
+### Aprender, sin tempo
+
+Para progresiones nuevas, el modo **Aprender** muestra un acorde a la vez con su diagrama y espera: cuando el micrófono lo escucha bien, pasa al siguiente. Ves una cola con los que vienen, cuánto tardaste en cada cambio y qué tanto se parece lo que tocas al acorde pedido ("Escucho Em, no C"). Cuando la mediana de tus últimos 8 cambios baja de 1 segundo (cambiar en un tiempo a 60 BPM), la app te lo dice y arranca sola la ronda **con tempo** a 60 BPM. Sin micrófono, avanzas con *Ya lo tengo* o la barra espaciadora.
+
+### Con tempo
 
 En **Practicar → Secuencias** armas la progresión de una canción (por ejemplo `G D Em C`) y la practicas en orden con clic. La pantalla muestra el acorde actual, el que sigue y sus diagramas.
 

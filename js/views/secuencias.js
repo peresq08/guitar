@@ -3,7 +3,7 @@
 import { data, save, toast, esc, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
-import { classify } from "../detect.js";
+import { classify, chordTemplate } from "../detect.js";
 import { Highway, Feedback, ChordJudge, swapText } from "../ui/highway.js";
 import { openMicSettings, warnGuideEcho } from "../ui/calib.js";
 import { allPatterns, patternById, playHit, STRUM_SYMBOL } from "./rasgueo.js";
@@ -82,6 +82,9 @@ export function mountSecuencias(container) {
   <div class="panel deck-panel screen">
    <div class="deck">
     <div class="deck-top">
+      <div class="seg" role="radiogroup" id="sqModeSeg" aria-label="Modo de práctica" style="flex:0 0 auto">
+        <button role="radio" data-sqm="aprender">Aprender</button><button role="radio" data-sqm="tempo">Con tempo</button>
+      </div>
       <select id="sqPick" aria-label="Elegir secuencia"></select>
       <span id="sqManual" class="row" style="gap:6px" hidden><input type="number" id="sqBpm" min="40" max="200" aria-label="Tempo en BPM" style="width:80px"></span>
       <select id="sqStrum" aria-label="Rasgueo" style="flex:0 1 210px"></select>
@@ -89,27 +92,32 @@ export function mountSecuencias(container) {
     </div>
     <div class="prog-chords" id="sqStrip"></div>
     <div id="sqHwy"></div>
+    <div class="lqueue" id="sqQueue" hidden></div>
     <div class="stage dstage" id="sqStage" aria-live="polite">
       <div class="meta">
         <span class="lab" id="sqLab">Listo</span>
         <div class="now"><span class="chordnow" id="sqNow"></span><span class="stage-chord" id="sqDiag"></span></div>
         <div class="beats" id="sqBeats" style="justify-content:flex-start"></div>
         <div class="sgrid stage-strum" id="sqStrumGrid" hidden></div>
+        <div class="lmeter" id="sqMatch" hidden><span>Coincidencia</span><div class="bar"><div id="sqMatchBar"></div></div><b id="sqMatchPct">–</b></div>
         <span class="sub" id="sqSub"></span>
       </div>
       <div class="nextbox" id="sqNextBox"><span class="lab">Sigue</span><span class="nxt" id="sqNext"></span><span class="stage-chord" id="sqNextDiag"></span></div>
+      <div class="lgo" id="sqGo" hidden></div>
     </div>
     <div class="panel hl" id="sqResult" hidden>
       <div class="label" id="sqResLabel"></div>
       <div class="row"><div class="stepper"><button class="icon-btn" id="sqMinus" aria-label="Uno menos">−</button><input type="number" id="sqResN" min="0" max="400" value="0" aria-label="Cambios limpios"><button class="icon-btn" id="sqPlus" aria-label="Uno más">+</button></div>
       <button class="btn primary" id="sqSave">Guardar</button><button class="btn" id="sqDrop">Descartar</button></div>
     </div>
+    <div class="lprog" id="sqLearnProg" hidden></div>
     <div class="deck-ctl">
       <label class="chip-toggle"><input type="checkbox" id="sqAuto"> Tempo automático</label>
       <label class="chip-toggle"><input type="checkbox" id="sqMic"> Calificar con micrófono</label>
       <label class="chip-toggle" id="sqGuideRow"><input type="checkbox" id="sqGuide"> Sonido guía</label>
       <button class="btn small ghost" id="sqCal">Micrófono y calibración</button>
       <select id="sqDur" aria-label="Duración de la ronda"><option value="1">1 minuto</option><option value="2">2 minutos</option><option value="3">3 minutos</option><option value="5">5 minutos</option><option value="10">10 minutos</option></select>
+      <button class="btn small" id="sqSkip" hidden>Saltar acorde</button>
       <button class="btn primary" id="sqStart" data-primary>Empezar ronda</button>
     </div>
    </div>
@@ -128,6 +136,8 @@ export function mountSecuencias(container) {
   $("#sqMic", el).onchange = e => { data.ajustes.secMic = e.target.checked; save(); renderStats(); };
   $("#sqBpm", el).onchange = e => { const q = cur(); q.bpm = clampBpm(+e.target.value || q.bpm); e.target.value = q.bpm; save(); renderTempo(); idle(); };
   $("#sqStart", el).onclick = toggle;
+  el.querySelectorAll("[data-sqm]").forEach(b => b.onclick = () => { if (P.run || LRN.run) return; const q = cur(); q.modo = b.dataset.sqm; save(); render(); });
+  $("#sqSkip", el).onclick = () => { if (LRN.run) learnAdvance(!LRN.mic); };
   $("#sqStrum", el).onchange = e => { if (P.run) return; const q = cur(); q.rasgueo = e.target.value; q.rasgueoManual = true; save(); render(); };
   $("#sqGuide", el).onchange = e => { data.ajustes.secGuia = e.target.checked; save(); };
   const dur = $("#sqDur", el); dur.value = String(data.ajustes.secMin || 1);
@@ -138,7 +148,7 @@ export function mountSecuencias(container) {
   $("#sqPlus", el).onclick = () => rn.value = (+rn.value || 0) + 1;
   $("#sqDrop", el).onclick = () => { $("#sqResult", el).hidden = true; idle(); };
   $("#sqSave", el).onclick = saveRound;
-  window.addEventListener("riff:stop-seq", () => P.run && stop(true));
+  window.addEventListener("riff:stop-seq", () => { if (P.run) stop(true); if (LRN.run) learnStop(); });
   render();
 }
 export function showSecuencia(id) { if (P.run) return; if (list().some(q => q.id === id)) { data.ajustes.secId = id; save(); render(); } }
@@ -190,6 +200,7 @@ function idle() {
     while (q.acordes.length && t < 12 && n < 200) { const a = q.acordes[n % q.acordes.length]; list.push({ id: "p" + n, t0: t, t1: t + a.t * beat, label: a.c }); t += a.t * beat; n++; }
     hw.preview(list, strumHits(q, 1, 12, q.bpm, 0));
   }
+  applyMode(q);
 }
 // Patrón de rasgueo en grande dentro de la tarjeta: la casilla que suena se ilumina y la del siguiente golpe se marca
 const COUNTS = { 2: ["", "y"], 3: ["", "y", "a"], 4: ["", "e", "y", "a"] };
@@ -231,6 +242,7 @@ function renderStats() {
   }
   box.innerHTML = `<div class="label">Tu avance con esta secuencia</div>${chart}
     <p class="note">${q.auto !== false ? "Tempo automático: sube si 85% o más de los cambios salen limpios y a tiempo, se mantiene entre 70 y 85%, y baja si salen menos del 70%." : "Tempo fijo: cámbialo junto al selector de secuencia."}${data.ajustes.secMic !== false ? " La sensibilidad y la prueba de bocinas están en Micrófono y calibración." : ""}</p>
+    ${q.aprender ? `<p class="note"><b>Aprender:</b> tu mejor marca es cambiar en ${q.aprender.mejor.toFixed(1)} s (≈${Math.round(60 / Math.max(q.aprender.mejor, .2))} BPM)${q.aprender.mejor <= GOAL ? ", ya lista para tempo" : `; la meta para pasar a tempo es ${GOAL.toFixed(1)} s`}.</p>` : ""}
     ${(() => { const ds = distinct(q), ok = ds.filter(c => data.calibracion[c]); return `<p class="note"><b>Calibración:</b> ${ok.length === ds.length ? "todos los acordes de esta secuencia están calibrados." : `${ok.length} de ${ds.length} acordes calibrados${ds.length - ok.length ? ` (faltan ${ds.filter(c => !data.calibracion[c]).join(", ")})` : ""}.`}</p>`; })()}
     ${fallos.length ? `<div class="stack"><div class="label">Los cambios que más te cuestan</div>
       ${fallos.map(f => { const [a, b] = f.k.split("→"); return `<div class="row between"><span><b>${esc(a)} → ${esc(b)}</b> <span class="note">${Math.round(f.p * 100)}% limpios en ${f.tot} intentos</span></span>
@@ -307,6 +319,7 @@ function renderEditor() {
 
 /* ---------- Reproducción ---------- */
 async function toggle() {
+  if (LRN.run || (!P.run && modeOf(cur()) === "aprender")) return learnToggle();
   if (P.run) { stop(true); return; }
   const a = A.ctx(); if (!a) return;
   const q = cur(); if (distinct(q).length < 2) return;
@@ -428,4 +441,122 @@ function saveRound() {
   }
   save(); toast(msg);
   $("#sqResult", el).hidden = true; renderTempo(); idle(); renderStats();
+}
+
+/* ---------- Modo Aprender: sin tempo ----------
+   Un acorde en pantalla; cuando el micrófono lo escucha bien, pasa al siguiente. Se mide el tiempo de cada cambio
+   y, cuando la mediana de los últimos 8 cambios baja de 1 segundo (cambiar en un tiempo a 60 BPM), se ofrece
+   arrancar la ronda con tempo a 60 BPM. */
+const LRN = { run: false, iv: null, seq: [], names: [], idx: 0, tPrompt: 0, hits: 0, times: [], first: true, offered: false, mic: true, match: 0 };
+const GOAL = 1.0, OVERHEAD = .3;   // segundos; OVERHEAD = lo que tarda la detección en confirmar un acorde
+const modeOf = q => q.modo || ((q.hist && q.hist.length) ? "tempo" : "aprender");
+const median = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; };
+function collapse(list) { const out = list.filter((c, i) => c !== list[(i - 1 + list.length) % list.length]); return out.length ? out : list.slice(0, 1); }
+function applyMode(q) {
+  const learn = modeOf(q) === "aprender";
+  el.querySelectorAll("[data-sqm]").forEach(b => b.setAttribute("aria-checked", (b.dataset.sqm === "aprender") === learn));
+  $("#sqHwy", el).hidden = learn; $("#sqQueue", el).hidden = !learn; $("#sqStrip", el).hidden = learn; $("#sqLearnProg", el).hidden = !learn; $("#sqMatch", el).hidden = !learn;
+  ["sqAuto", "sqMic"].forEach(id => $("#" + id, el).closest("label").hidden = learn);
+  $("#sqGuideRow", el).hidden = learn || !q.rasgueo; $("#sqDur", el).hidden = learn; $("#sqTempoTop", el).hidden = learn; $("#sqStrum", el).hidden = learn;
+  if (learn) { $("#sqStrumGrid", el).hidden = true; $("#sqBeats", el).hidden = true; }
+  if (!P.run && !LRN.run) $("#sqStart", el).textContent = learn ? "Empezar a aprender" : "Empezar ronda";
+  if (learn && !LRN.run) learnIdle(q);
+}
+function learnIdle(q) {
+  const seq = collapse(q.acordes.map(a => a.c));
+  stageShow(seq[0], seq[1]);
+  $("#sqLab", el).textContent = "Sin tempo";
+  $("#sqSub", el).textContent = "Toca el acorde que ves. Cuando suene bien, pasa solo al siguiente.";
+  renderQueue(seq, 0, []);
+  const r = q.aprender;
+  learnProg(r && r.mejor != null ? r.mejor : null, 0, r ? `Tu mejor marca: cambias en ${r.mejor.toFixed(1)} s (≈${Math.round(60 / Math.max(r.mejor, .2))} BPM).` : "");
+}
+function renderQueue(seq, idx, times) {
+  const past = [], N = seq.length;
+  for (let k = Math.max(0, idx - 3); k < idx; k++) past.push({ c: seq[k % N], t: times[k - 1] ?? null, done: true });
+  const next = []; for (let k = idx + 1; k <= idx + 4; k++) next.push({ c: seq[k % N] });
+  $("#sqQueue", el).innerHTML = past.map(p => `<span class="lq done"><b>${esc(p.c)}</b><small>${p.t != null ? p.t.toFixed(1) + " s" : "✓"}</small></span>`).join("")
+    + `<span class="lq cur"><b>${esc(seq[idx % N])}</b><small>ahora</small></span>`
+    + next.map(n => `<span class="lq"><b>${esc(n.c)}</b></span>`).join("");
+}
+function learnProg(med, n, extra) {
+  const box = $("#sqLearnProg", el), pct = med ? Math.max(4, Math.min(100, GOAL / med * 100)) : 0;
+  box.innerHTML = `<div class="row between"><span>${med ? `Tu cambio: <b>${med.toFixed(1)} s</b> (≈${Math.round(60 / Math.max(med, .2))} BPM)` : "Tu cambio: —"}</span><span class="muted">Meta: ${GOAL.toFixed(1)} s (60 BPM)${n ? ` · ${Math.min(n, 8)} de 8 cambios` : ""}</span></div>
+    <div class="bar ${med && med <= GOAL ? "good" : ""}"><div style="width:${pct}%"></div></div>${extra ? `<span class="note">${extra}</span>` : ""}`;
+}
+async function learnToggle() {
+  if (LRN.run) { learnStop(); return; }
+  const q = cur(), seq = collapse(q.acordes.map(a => a.c));
+  if (seq.length < 2) { toast("La secuencia necesita al menos dos acordes distintos"); return; }
+  LRN.mic = true;
+  if (!A.mic.an) { $("#sqLab", el).textContent = "Silencia las cuerdas"; $("#sqSub", el).textContent = "Midiendo el ruido del cuarto…"; }
+  if (!(await A.micOn())) { LRN.mic = false; toast("Sin micrófono: pulsa Ya lo tengo (o Espacio) cuando suene bien cada acorde"); }
+  window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-rasgueo")); window.dispatchEvent(new Event("riff:stop-cambios"));
+  Object.assign(LRN, { run: true, q, seq, names: distinct(q), idx: 0, tPrompt: performance.now(), hits: 0, times: [], first: true, offered: false, hinted: false, match: 0 });
+  fb.reset(); $("#sqStage", el).classList.add("live"); $("#sqStart", el).textContent = "Detener"; $("#sqPick", el).disabled = true;
+  $("#sqSkip", el).hidden = false; $("#sqSkip", el).textContent = LRN.mic ? "Saltar acorde" : "Ya lo tengo";
+  $("#sqSkip", el).toggleAttribute("data-primary", !LRN.mic);   // sin micrófono, Espacio avanza al siguiente acorde
+  $("#sqLab", el).textContent = "Toca este acorde"; learnShow(); learnProg(null, 0, "");
+  LRN.iv = setInterval(learnTick, 50); A.keepAwake(true);
+}
+function learnStop() {
+  clearInterval(LRN.iv); LRN.run = false; A.keepAwake(false); clearInterval(LRN.goIv);
+  $("#sqGo", el).hidden = true; $("#sqSkip", el).hidden = true; $("#sqSkip", el).removeAttribute("data-primary"); $("#sqPick", el).disabled = false;
+  $("#sqStage", el).classList.remove("live");
+  const q = LRN.q, med = median(LRN.times.slice(-8));
+  if (q && med != null && LRN.times.length >= 4) {
+    q.aprender = { mejor: Math.min(med, q.aprender?.mejor ?? Infinity), ultima: med, t: new Date().toISOString() };
+    save(); renderStats();
+  }
+  $("#sqStart", el).textContent = "Empezar a aprender";
+  if (q) learnIdle(q);
+}
+function learnShow() {
+  const N = LRN.seq.length, c = LRN.seq[LRN.idx % N], nx = LRN.seq[(LRN.idx + 1) % N];
+  stageShow(c, nx); renderQueue(LRN.seq, LRN.idx, LRN.times);
+  $("#sqSub", el).textContent = LRN.mic ? "Escuchando…" : "Pulsa Ya lo tengo cuando suene bien";
+}
+function learnTick() {
+  if (!LRN.run || !$("#sqGo", el).hidden) return;   // pausa mientras se ofrece pasar a tempo
+  const exp = LRN.seq[LRN.idx % LRN.seq.length];
+  if (LRN.mic) {
+    const fr = A.chroma(), lab = classify(fr, LRN.names), m = fr.on ? A.cosSim(fr.chroma, chordTemplate(exp)) : 0;
+    LRN.match = LRN.match * .6 + m * .4;
+    $("#sqMatchBar", el).style.width = Math.round(LRN.match * 100) + "%"; $("#sqMatchBar", el).parentElement.classList.toggle("good", lab === exp);
+    $("#sqMatchPct", el).textContent = fr.on ? Math.round(LRN.match * 100) + "%" : "–";
+    $("#sqSub", el).textContent = !fr.on ? "Toca el acorde" : lab === exp ? `¡Eso es ${exp}!` : lab ? `Escucho ${lab}, no ${exp}` : "Escucho algo, pero no es claro: revisa que cada cuerda suene";
+    if (lab === exp) LRN.hits++; else if (lab) LRN.hits = Math.max(0, LRN.hits - 1);
+    if (LRN.hits >= 4) { learnAdvance(true); return; }
+  }
+  if (!LRN.hinted && performance.now() - LRN.tPrompt > 8000) {
+    LRN.hinted = true; toast(`¿Te atoras con ${exp}? Mira el diagrama: los números son los dedos. Si no avanza, usa Saltar acorde.`);
+  }
+}
+function learnAdvance(counted) {
+  const dt = Math.max(.1, (performance.now() - LRN.tPrompt) / 1000 - (LRN.mic ? OVERHEAD : 0));
+  if (!LRN.first && counted) LRN.times.push(dt);
+  else if (!LRN.first) LRN.times.push(Math.max(dt, 3));   // saltado: cuenta como cambio lento
+  LRN.first = false;
+  fb.show(counted ? "ok" : "miss");
+  LRN.idx++; LRN.tPrompt = performance.now(); LRN.hits = 0; LRN.hinted = false; LRN.match = 0;
+  learnShow();
+  const last = LRN.times.slice(-8), med = median(last);
+  learnProg(med, LRN.times.length, "");
+  if (!LRN.offered && last.length >= 8 && med <= GOAL && Math.max(...last) <= 2) offerTempo(med);
+}
+// Meta alcanzada: cuenta regresiva y arranca la ronda con tempo a 60 BPM
+function offerTempo(med) {
+  LRN.offered = true;
+  const box = $("#sqGo", el); let n = 5;
+  const paint = () => box.innerHTML = `<div><b>¡Ya cambias en ${med.toFixed(1)} s!</b><span>Eso es suficiente para tocar con tempo. Empezamos a 60 BPM en ${n}…</span></div>
+    <div class="row"><button class="btn primary small" id="goNow">Empezar ya</button><button class="btn small" id="goStay">Seguir sin tempo</button></div>`;
+  paint(); box.hidden = false; A.chime();
+  const go = () => {
+    clearInterval(LRN.goIv); const q = LRN.q; learnStop();
+    q.modo = "tempo"; if (!(q.hist && q.hist.length) || q.bpm < 60) q.bpm = 60; save(); render();
+    toggle();
+  };
+  box.querySelector("#goNow").onclick = go;
+  box.querySelector("#goStay").onclick = () => { clearInterval(LRN.goIv); box.hidden = true; LRN.tPrompt = performance.now(); };
+  LRN.goIv = setInterval(() => { n--; if (n <= 0) go(); else { paint(); box.querySelector("#goNow").onclick = go; box.querySelector("#goStay").onclick = () => { clearInterval(LRN.goIv); box.hidden = true; }; } }, 1000);
 }

@@ -126,6 +126,19 @@ export const LIBRARY = [
   { titulo: "Bad Moon Rising", artista: "Creedence Clearwater Revival", anio: 1969, nivel: 2, bpm: 90, rasgueo: "rock8", tip: "D, A y G con rasgueo de country-rock.", secuencias: [{ nombre: "estrofa", acordes: "D A G D" }] },
   { titulo: "Heart of Gold", artista: "Neil Young", anio: 1972, nivel: 1, bpm: 85, rasgueo: "pop", tip: "Acústica y sencilla: Em, C, D y G.", secuencias: [{ nombre: "estrofa", acordes: "Em C D G" }] },
   { titulo: "Take Me Home, Country Roads", artista: "John Denver", anio: 1971, nivel: 1, bpm: 82, rasgueo: "country", tip: "La de fogata por excelencia.", secuencias: [{ nombre: "coro", acordes: "G D Em C G D C G" }] },
+  // Fáciles: dos a cuatro acordes abiertos
+  { titulo: "Love Me Do", artista: "The Beatles", anio: 1962, nivel: 1, bpm: 148, rasgueo: "rock8", tip: "Solo G y C en la estrofa: ideal para tus primeros cambios.", secuencias: [{ nombre: "estrofa", acordes: "G C G C G C G G" }] },
+  { titulo: "Blowin' in the Wind", artista: "Bob Dylan", anio: 1963, nivel: 1, bpm: 88, rasgueo: "pop", tip: "G, C y D a ritmo tranquilo.", secuencias: [{ nombre: "estrofa", acordes: "G C D G G C G G" }] },
+  { titulo: "Leaving on a Jet Plane", artista: "John Denver", anio: 1969, nivel: 1, bpm: 86, rasgueo: "pop", tip: "G, C y D con rasgueo suave de folk.", secuencias: [{ nombre: "estrofa", acordes: "G C G C G C D D" }] },
+  { titulo: "Perfect", artista: "Ed Sheeran", anio: 2017, nivel: 1, bpm: 63, rasgueo: "balada", tip: "G, Em, C y D, lenta. La original usa capo en el traste 1.", secuencias: [{ nombre: "estrofa", acordes: "G Em C D" }] },
+  { titulo: "Hallelujah", artista: "Leonard Cohen", anio: 1984, nivel: 2, bpm: 56, rasgueo: "balada", tip: "C, Am, F (mini) y G. Lenta, para afianzar el F.", secuencias: [{ nombre: "estrofa", acordes: "C Am C Am F (mini) G C G" }] },
+  { titulo: "Imagine", artista: "John Lennon", anio: 1971, nivel: 2, bpm: 75, rasgueo: "balada", tip: "Versión simplificada: C y F en lugar de C, Cmaj7 y F.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "C F (mini) C F (mini)" }] },
+  // Intermedias: cejillas, séptimas y rasgueos con más trabajo
+  { titulo: "Despacito", artista: "Luis Fonsi ft. Daddy Yankee", anio: 2017, nivel: 5, bpm: 89, rasgueo: "pop", tip: "Bm, G, D y A toda la canción: excelente para dominar Bm.", secuencias: [{ nombre: "toda la canción", acordes: "Bm G D A" }] },
+  { titulo: "Someone Like You", artista: "Adele", anio: 2011, nivel: 5, bpm: 67, rasgueo: "balada", tip: "A, E, F#m y D. En la grabación es piano arpegiado; aquí, rasgueo lento.", secuencias: [{ nombre: "estrofa", acordes: "A E F#m D" }] },
+  { titulo: "Californication", artista: "Red Hot Chili Peppers", anio: 1999, nivel: 5, bpm: 96, rasgueo: "rock8", tip: "La estrofa es Am y F con cejilla; el coro cambia a C, G, Dm y Am.", secuencias: [{ nombre: "estrofa", acordes: "Am:8 F:8" }, { nombre: "coro", acordes: "C G Dm Am" }] },
+  { titulo: "More Than Words", artista: "Extreme", anio: 1990, nivel: 4, bpm: 92, rasgueo: "funk2", tip: "Rasgueo percusivo con golpes apagados: ideal después de Funk 2.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "G Cadd9 Am7 C D Dsus4" }] },
+  { titulo: "Hey There Delilah", artista: "Plain White T's", anio: 2006, nivel: 5, bpm: 104, rasgueo: "pop", tip: "D y F#m se alternan; luego Bm, G y A.", secuencias: [{ nombre: "estrofa", acordes: "D F#m D F#m Bm G A Bm" }] },
   // Country clásico y moderno
   { titulo: "Folsom Prison Blues", artista: "Johnny Cash", anio: 1955, nivel: 2, bpm: 104, rasgueo: "boomchicka", tip: "El ritmo de tren: bajo y golpe. E, A y B7.", secuencias: [{ nombre: "estrofa", acordes: "E:8 A:4 E:4 B7:4 E:4" }] },
   { titulo: "Ring of Fire", artista: "Johnny Cash", anio: 1963, nivel: 1, bpm: 105, rasgueo: "country", tip: "G, C y D con bajo y rasgueo.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "G C G G D G" }] },
