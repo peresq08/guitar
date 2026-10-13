@@ -9,8 +9,8 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | **Hoy** | Nivel actual, siguiente meta y rutina guiada que se arma sola según tu nivel y el tiempo que tengas. |
 | **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, metrónomo progresivo y Jam con batería y bajo. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda. |
-| **Acordes** | 41 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 27 canciones (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
+| **Acordes** | 43 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
+| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 53 canciones de rock, pop, metal, grunge, reggae y country (con secuencia de acordes y rasgueo sugerido), récords y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 
@@ -74,7 +74,7 @@ En **Practicar → Secuencias** armas la progresión de una canción (por ejempl
 
 ## Entrenador de rasgueo
 
-En **Practicar → Rasgueo** hay 11 patrones, de negras y pop básico a galope, shuffle y tres niveles de funk en semicorcheas. Cada casilla muestra ↓ abajo, ↑ arriba, ✕ golpe apagado o · la mano pasa sin tocar. Las flechas grandes son acentos.
+En **Practicar → Rasgueo** hay 14 patrones: negras, pop básico, balada, country (bajo y rasgueo), boom-chicka, reggae, rock, ska, punk/metal, galope, shuffle y tres niveles de funk en semicorcheas. Cada casilla muestra ↓ abajo, ↑ arriba, ● bajo (la cuerda más grave del acorde), ✕ golpe apagado o · la mano pasa sin tocar. Las flechas grandes son acentos.
 
 - **Sonido guía:** escucha el patrón tocado con el acorde o la secuencia que elijas.
 - **Rondas de 8 o 16 compases**, o **sin fin** con subida de 2 BPM cada 4 compases.

@@ -128,7 +128,7 @@ export function mountSecuencias(container) {
   $("#sqMic", el).onchange = e => { data.ajustes.secMic = e.target.checked; save(); renderStats(); };
   $("#sqBpm", el).onchange = e => { const q = cur(); q.bpm = clampBpm(+e.target.value || q.bpm); e.target.value = q.bpm; save(); renderTempo(); idle(); };
   $("#sqStart", el).onclick = toggle;
-  $("#sqStrum", el).onchange = e => { if (P.run) return; cur().rasgueo = e.target.value; save(); render(); };
+  $("#sqStrum", el).onchange = e => { if (P.run) return; const q = cur(); q.rasgueo = e.target.value; q.rasgueoManual = true; save(); render(); };
   $("#sqGuide", el).onchange = e => { data.ajustes.secGuia = e.target.checked; save(); };
   const dur = $("#sqDur", el); dur.value = String(data.ajustes.secMin || 1);
   dur.onchange = () => { data.ajustes.secMin = +dur.value; save(); };
@@ -151,7 +151,8 @@ function render() {
   $("#sqPick", el).innerHTML = `${mine.length ? `<optgroup label="Progresiones">${mine.map(opt).join("")}</optgroup>` : ""}${songs.length ? `<optgroup label="Canciones">${songs.map(opt).join("")}</optgroup>` : ""}`;
   $("#sqTitle", el).textContent = q.nombre;
   // Rasgueo: el elegido para la secuencia o, si no hay, el sugerido de la canción ligada
-  if (q.rasgueo === undefined) { const song = (data.canciones || []).find(s => s.id === q.cancion); q.rasgueo = song && song.rasgueo ? song.rasgueo : ""; }
+  // Si no lo elegiste a mano, sigue al rasgueo sugerido de la canción (así se actualiza cuando la biblioteca agrega uno)
+  if (!q.rasgueoManual) { const song = (data.canciones || []).find(s => s.id === q.cancion); q.rasgueo = song && song.rasgueo ? song.rasgueo : (q.rasgueo || ""); }
   $("#sqStrum", el).innerHTML = `<option value="">Sin rasgueo (solo clic)</option>` + allPatterns().map(p => `<option value="${p.id}" ${q.rasgueo === p.id ? "selected" : ""}>Rasgueo: ${esc(p.nombre)}</option>`).join("");
   $("#sqGuideRow", el).hidden = !q.rasgueo; $("#sqGuide", el).checked = data.ajustes.secGuia !== false;
   $("#sqAuto", el).checked = q.auto !== false;
@@ -199,7 +200,7 @@ function strumGrid(q, active) {
   if (box.dataset.pat !== p.id + p.p) {
     box.dataset.pat = p.id + p.p;
     box.style.setProperty("--n", p.p.length); box.style.setProperty("--half", p.p.length / 2);
-    box.innerHTML = [...p.p].map((c, i) => { const sub = i % p.spb; return `<div class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${sub === 0 ? "beat" : ""}"><span class="sym">${STRUM_SYMBOL[c]}</span><span class="cnt">${sub === 0 ? Math.floor(i / p.spb) + 1 : COUNTS[p.spb][sub]}</span></div>`; }).join("");
+    box.innerHTML = [...p.p].map((c, i) => { const sub = i % p.spb; return `<div class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${c === "b" ? "bass" : ""} ${sub === 0 ? "beat" : ""}"><span class="sym">${STRUM_SYMBOL[c]}</span><span class="cnt">${sub === 0 ? Math.floor(i / p.spb) + 1 : COUNTS[p.spb][sub]}</span></div>`; }).join("");
   }
   const cells = box.children;
   let nextHit = -1;

@@ -35,6 +35,8 @@ export const CHORDS = {
   "B5":  { f: "x244xx", d: "-134--", g: "Power chords" },
   "C5":  { f: "x355xx", d: "-134--", g: "Power chords" },
   "Bb5": { f: "x133xx", d: "-134--", g: "Power chords" },
+  "F5":  { f: "133xxx", d: "134---", g: "Power chords" },
+  "Ab5": { f: "466xxx", d: "134---", g: "Power chords" },
   "C#5": { f: "x466xx", d: "-134--", g: "Power chords" },
   // Cejilla
   "F":   { f: "133211", d: "134211", g: "Cejilla" },

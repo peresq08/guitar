@@ -12,6 +12,9 @@ export const PATTERNS = [
   { id: "negras", nombre: "Negras", nivel: 1, spb: 2, p: "d-d-d-d-", bpm: 70, desc: "Un golpe abajo por tiempo. La mano sube y baja sin parar aunque en la subida no toques: ese movimiento constante es la base de todo lo demás." },
   { id: "pop", nombre: "Pop básico", nivel: 1, spb: 2, p: "d-du-udu", bpm: 70, desc: "Abajo, abajo-arriba, arriba-abajo-arriba. Sirve para casi cualquier canción pop o balada. Fíjate que en el 3 la mano baja sin tocar." },
   { id: "balada", nombre: "Balada", nivel: 1, spb: 2, p: "D-d-dudu", bpm: 66, desc: "Dos golpes largos y luego abajo-arriba-abajo-arriba. Acentúa el primer tiempo." },
+  { id: "country", nombre: "Country: bajo y rasgueo", nivel: 2, spb: 2, p: "b-dub-du", bpm: 90, desc: "El 'bum-chaca' del country: en 1 y 3 tocas solo la cuerda más grave del acorde (●) y en 2 y 4 rasgueas abajo-arriba. La mano derecha nunca se detiene." },
+  { id: "boomchicka", nombre: "Boom-chicka (Johnny Cash)", nivel: 2, spb: 2, p: "b-d-b-d-", bpm: 100, desc: "Bajo y golpe, bajo y golpe, como un tren. Apaga un poco las cuerdas con la palma para que el golpe suene corto." },
+  { id: "reggae", nombre: "Reggae: golpe en 2 y 4", nivel: 2, spb: 2, p: "--D---D-", bpm: 76, desc: "Un golpe corto y seco en el 2 y en el 4; los tiempos 1 y 3 quedan en silencio. Apaga las cuerdas justo después de cada golpe para que suene 'chak'." },
   { id: "rock8", nombre: "Rock en corcheas", nivel: 2, spb: 2, p: "duDuduDu", bpm: 90, desc: "Corcheas continuas con acento en 2 y 4, donde suena la tarola. Ideal con power chords." },
   { id: "ska", nombre: "Contratiempo (ska)", nivel: 2, spb: 2, p: "-U-U-U-U", bpm: 90, desc: "Solo los arriba, en los 'y'. La mano baja en silencio en cada tiempo. Corto y seco: apaga las cuerdas justo después de cada golpe." },
   { id: "rapido", nombre: "Corcheas abajo (punk/metal)", nivel: 3, spb: 4, p: "d-d-d-d-d-d-d-d-", bpm: 110, desc: "Todo hacia abajo, en corcheas. Con palm mute y muñeca suelta; si te cansas, el tempo está muy alto." },
@@ -22,8 +25,9 @@ export const PATTERNS = [
   { id: "funk3", nombre: "Funk 3: sincopado", nivel: 5, spb: 4, p: "D--ux-du-ud-x-du", bpm: 70, desc: "Muchos golpes caen fuera del tiempo. La clave: la mano sigue bajando y subiendo en semicorcheas aunque no toques." },
 ];
 const COUNT = { 2: ["", "y"], 3: ["", "y", "a"], 4: ["", "e", "y", "a"] };
-const SYMBOL = { d: "↓", D: "↓", u: "↑", U: "↑", x: "✕", "-": "·" };
-const valid = (p, spb) => [...p].every((c, i) => spb === 3 || c === "-" || c === "x" || (i % 2 === 0 ? "dD".includes(c) : "uU".includes(c)));
+// b = bajo: la nota más grave del acorde, sola (el "bum" del country)
+const SYMBOL = { d: "↓", D: "↓", u: "↑", U: "↑", x: "✕", b: "●", "-": "·" };
+const valid = (p, spb) => [...p].every((c, i) => spb === 3 || c === "-" || c === "x" || (i % 2 === 0 ? "dDb".includes(c) : "uU".includes(c)));
 
 const store = () => { data.rasgueos = data.rasgueos || { custom: [], prog: {} }; return data.rasgueos; };
 const all = () => [...PATTERNS, ...(store().custom || [])];
@@ -130,7 +134,7 @@ function grid(active, marks) {
   $("#rgGrid", el).innerHTML = [...p.p].map((c, i) => {
     const beat = Math.floor(i / p.spb) + 1, sub = i % p.spb, lab = sub === 0 ? beat : cnt[sub];
     const m = marks && marks[i];
-    return `<div class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${i === active ? "on" : ""} ${sub === 0 ? "beat" : ""}">
+    return `<div class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${c === "b" ? "bass" : ""} ${i === active ? "on" : ""} ${sub === 0 ? "beat" : ""}">
       <span class="sym">${SYMBOL[c]}</span><span class="cnt">${lab}</span>${m ? `<span class="dev ${m.cls}" title="${m.title}">${m.txt}</span>` : ""}</div>`;
   }).join("");
 }
@@ -199,7 +203,7 @@ function renderEditor() {
       <label for="peName">Nombre<input type="text" id="peName" maxlength="40" value="${esc(d.nombre)}"></label>
       <label for="peSpb">Subdivisión<select id="peSpb"><option value="2">Corcheas (1 y)</option><option value="4">Semicorcheas (1 e y a)</option><option value="3">Tresillos (1 y a)</option></select></label>
     </div>
-    <div class="sgrid edit" style="--n:${d.p.length};--half:${d.p.length / 2}">${[...d.p].map((c, i) => { const sub = i % d.spb; return `<button class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${sub === 0 ? "beat" : ""}" data-cell="${i}" aria-label="Casilla ${i + 1}"><span class="sym">${SYMBOL[c]}</span><span class="cnt">${sub === 0 ? Math.floor(i / d.spb) + 1 : cnt[sub]}</span></button>`; }).join("")}</div>
+    <div class="sgrid edit" style="--n:${d.p.length};--half:${d.p.length / 2}">${[...d.p].map((c, i) => { const sub = i % d.spb; return `<button class="scell ${c === "-" ? "rest" : ""} ${"DU".includes(c) ? "acc" : ""} ${c === "x" ? "mute" : ""} ${c === "b" ? "bass" : ""} ${sub === 0 ? "beat" : ""}" data-cell="${i}" aria-label="Casilla ${i + 1}"><span class="sym">${SYMBOL[c]}</span><span class="cnt">${sub === 0 ? Math.floor(i / d.spb) + 1 : cnt[sub]}</span></button>`; }).join("")}</div>
     <p class="note">Toca una casilla: ${d.spb === 3 ? "abajo → acento → arriba → apagado → nada" : "en los tiempos y los 'y' la mano va abajo; en los 'e' y 'a', arriba"}. Mayúscula = acento.</p>
     <div class="row"><button class="btn primary small" id="peSave">Guardar</button><button class="btn small" id="peCancel">Cancelar</button><button class="btn small" id="peHear">▶ Escuchar</button></div>`;
   $("#peSpb", box).value = String(d.spb);
@@ -207,7 +211,7 @@ function renderEditor() {
   $("#peSpb", box).onchange = e => { const n = +e.target.value; d.spb = n; d.p = n === 4 ? "d-du-udud-du-udu" : n === 3 ? "d-ud-ud-ud-u" : "d-du-udu"; renderEditor(); };
   box.querySelectorAll("[data-cell]").forEach(b => b.onclick = () => {
     const i = +b.dataset.cell, c = d.p[i];
-    const cyc = d.spb === 3 ? ["d", "D", "u", "x", "-"] : i % 2 === 0 ? ["d", "D", "x", "-"] : ["u", "U", "x", "-"];
+    const cyc = d.spb === 3 ? ["d", "D", "b", "u", "x", "-"] : i % 2 === 0 ? ["d", "D", "b", "x", "-"] : ["u", "U", "x", "-"];
     const nx = cyc[(cyc.indexOf(c) + 1) % cyc.length];
     d.p = d.p.slice(0, i) + nx + d.p.slice(i + 1); renderEditor();
   });
@@ -230,6 +234,10 @@ function preview(p) {
 export function playHit(c, frets, t, slot) {
   if (c === "-") return;
   if (c === "x") { A.chuck(t, .45); return; }
+  if (c === "b") {   // bajo: la cuerda más grave que suena en el acorde
+    const i = [...frets].findIndex(f => f !== "x"); if (i < 0) return;
+    A.pluck(A.TUNING[i] + +frets[i], t, .42, Math.max(.4, Math.min(1.4, slot * 2.5))); return;
+  }
   const acc = c === "D" || c === "U", down = c === "d" || c === "D";
   const dur = Math.max(.25, Math.min(1.6, slot * 2.2));
   A.strum(down ? frets : frets.slice(0, 6), t, { down, gap: down ? .011 : .009, vol: (down ? .22 : .15) * (acc ? 1.6 : 1), dur });
