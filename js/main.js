@@ -1,5 +1,6 @@
 import { data, onChange, streak, practiceDays, dayKey, applyLane, $, $$ } from "./store.js";
 import { currentLevel, ensureSongs } from "./plan.js";
+import { registerCustomChords } from "./customchords.js";
 import * as A from "./audio.js";
 import { startRecording, stopRecording, isRecording, onRecState, fmtDur } from "./recorder.js";
 import { recLabel } from "./views/practicar.js";
@@ -78,11 +79,11 @@ document.addEventListener("keydown", e => {
   }
 });
 
-ensureSongs(); applyLane();
+registerCustomChords(); ensureSongs(); applyLane();
 A.mic.echo = data.ajustes.eco !== false; A.setSensitivity(data.ajustes.micSens || "media");
 for (const [k, v] of Object.entries(VIEWS)) v.mount($("#v-" + k));
 header();
-onChange(() => { header(); for (const v of Object.values(VIEWS)) v.refresh?.(); });
+onChange(() => { registerCustomChords(); header(); for (const v of Object.values(VIEWS)) v.refresh?.(); });
 
 let start = "hoy";
 try { start = sessionStorage.getItem("riff-view") || "hoy"; } catch (e) {}

@@ -1,6 +1,8 @@
 import { esc, $ } from "../store.js";
 import { CHORDS, GROUPS, diagram, fretboard, NOTES, NOTES_ES } from "../chords.js";
 import * as A from "../audio.js";
+import { openChordEditor } from "../ui/chordeditor.js";
+import { GROUP as OWN } from "../customchords.js";
 
 let root, group = "Mayores", sel = "C", scaleKey = 9, scaleType = "pm";
 const goTo = (view, opts) => window.dispatchEvent(new CustomEvent("riff:go", { detail: { view, opts } }));
@@ -11,7 +13,7 @@ const SC = {
   menor: { n: "Menor natural", iv: [0, 2, 3, 5, 7, 8, 10], tip: "La escala de muchos riffs de metal; agrega dos notas a la pentatónica." },
 };
 
-export function mount(el) { root = el; render(); }
+export function mount(el) { root = el; render(); window.addEventListener("riff:chords", () => { if (!Object.keys(CHORDS).some(n => CHORDS[n].g === group)) group = "Mayores"; render(); }); }
 
 function render() {
   const names = Object.keys(CHORDS).filter(n => CHORDS[n].g === group);
@@ -22,9 +24,9 @@ function render() {
   <div class="cols">
   <div class="col">
   <div class="panel">
-    <div class="label">Biblioteca de acordes</div>
+    <div class="row between"><div class="label">Biblioteca de acordes</div><button class="btn small" id="aNew">＋ Crear acorde</button></div>
     <div class="seg wrap" role="tablist" aria-label="Tipo de acorde">
-      ${GROUPS.map(g => `<button role="tab" aria-selected="${g === group}" data-g="${g}">${g === "Séptimas y sus" ? "7ª y sus" : g === "Power chords" ? "Power" : g}</button>`).join("")}
+      ${GROUPS.map(g => `<button role="tab" aria-selected="${g === group}" data-g="${g}">${g === "Séptimas y sus" ? "7ª y sus" : g === "Power chords" ? "Power" : g === OWN ? "Tuyos" : g}</button>`).join("")}
     </div>
     <div class="lib">${names.map(n => diagram(n, { button: true }).replace('class="chord"', `class="chord" aria-pressed="${n === sel}"`)).join("")}</div>
   </div>
@@ -35,7 +37,7 @@ function render() {
       ${diagram(sel, { large: true })}
       <div class="stack" style="flex:1;min-width:160px">
         <p class="note">Cuerdas de 6ª (grave) a 1ª (aguda). ○ al aire, ✕ no se toca. Los números son los dedos: 1 índice, 2 medio, 3 anular, 4 meñique.</p>
-        <div class="num muted">${esc(c.f.split("").join(" "))}</div>
+        <div class="num muted">${esc([...c.f].join(" "))}</div>${c.custom ? `<button class="btn small ghost" id="aEdit" style="align-self:flex-start">Editar o borrar</button>` : ""}
         <div class="row">
           <button class="btn primary small" id="aStrum">▶ Rasgueo</button>
           <button class="btn small" id="aArp">Nota por nota</button>
@@ -58,6 +60,9 @@ function render() {
     <button class="btn small" id="sPlay" style="align-self:flex-start">▶ Escuchar la escala</button>
   </div>`;
   root.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { group = b.dataset.g; render(); });
+  const done = nm => { if (nm && CHORDS[nm]) { sel = nm; group = CHORDS[nm].g; } render(); };
+  $("#aNew", root).onclick = () => openChordEditor({ onDone: done });
+  $("#aEdit", root)?.addEventListener("click", () => openChordEditor({ name: sel, onDone: done }));
   root.querySelectorAll("[data-chord]").forEach(b => b.onclick = () => { sel = b.dataset.chord; render(); A.strum(CHORDS[sel].f, 0, { vol: .28 }); });
   $("#aStrum", root).onclick = () => A.strum(c.f, 0, { vol: .3 });
   $("#aArp", root).onclick = () => A.strum(c.f, 0, { gap: .35, vol: .3, dur: 1.6 });

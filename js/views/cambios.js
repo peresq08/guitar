@@ -93,6 +93,8 @@ export function mountCambios(el) {
   let p = null; try { p = JSON.parse(localStorage.getItem("riff-par") || "null"); } catch (e) {}
   setPair(p ? p[0] : "Am", p ? p[1] : "E");
   ["cA", "cB"].forEach(id => $("#" + id, el).onchange = () => setPair(A_(), B_()));
+  // acordes nuevos creados por ti
+  window.addEventListener("riff:chords", () => ["cA", "cB"].forEach(id => { const s = $("#" + id, el), v = s.value; s.innerHTML = Object.keys(CHORDS).map(c => `<option>${esc(c)}</option>`).join(""); s.value = CHORDS[v] ? v : s.options[0].value; }));
   el.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => !C.run && setMode(b.dataset.mode));
   $("#micBtn", el).onclick = startMic;
   const sens = $("#micSens", el); sens.value = data.ajustes.micSens || "media"; A.setSensitivity(sens.value);

@@ -117,6 +117,10 @@ En la computadora, dentro de Practicar:
 - **Panel**: oculta la columna de la derecha (lista de tabs, editor, estadísticas) para que la práctica use todo el ancho. Se recuerda.
 - **Contraer** (abajo en el menú lateral): deja el menú solo con íconos.
 
+## Tus propios acordes
+
+En **Acordes → Crear acorde** tocas el traste de cada cuerda en un diapasón (✕ no suena, ○ al aire) y eliges desde qué traste se ve. La app reconoce el nombre por sus notas (por ejemplo, x13311 es **Bbsus2**), sugiere los dedos y te deja escucharlo. Al guardarlo aparece en la pestaña **Tuyos** y funciona en toda la app: Secuencias (escribe su nombre), Cambios, Rasgueo, el carril, el panel grande, la calibración y la detección por micrófono. Se guarda con tus datos y viaja en el respaldo.
+
 ## Rutina según tus puntos débiles
 
 La rutina de Hoy agrega hasta dos bloques marcados *Según tus datos*:
