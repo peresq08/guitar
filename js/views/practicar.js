@@ -1,4 +1,4 @@
-import { data, save, bestFor, toast, esc, $ } from "../store.js";
+import { data, save, bestFor, toast, esc, practiceStart, practiceEnd, $ } from "../store.js";
 import { CHORDS, diagram, fretboard, NOTES } from "../chords.js";
 import * as A from "../audio.js";
 import { mountCambios, applyCambiosOpts, refreshCambios } from "./cambios.js";
@@ -141,11 +141,11 @@ function schedule() {
 }
 function toggleMetro() {
   const a = A.ctx(); if (!a) return;
-  if (M.run) { M.run = false; clearInterval(M.timer); A.keepAwake(false); $("#mStart", mel).textContent = "Iniciar"; mel.querySelectorAll("#mBeats i").forEach(e => e.classList.remove("on")); progInfo(); return; }
+  if (M.run) { practiceEnd("metro", "metronomo"); M.run = false; clearInterval(M.timer); A.keepAwake(false); $("#mStart", mel).textContent = "Iniciar"; mel.querySelectorAll("#mBeats i").forEach(e => e.classList.remove("on")); progInfo(); return; }
   if ($("#mProg", mel).checked) setBpm(pcfg().ini);
   stopJam(); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo")); window.dispatchEvent(new Event("riff:stop-cambios"));
   Object.assign(M, { run: true, beat: 0, sub: 0, bars: 0, next: a.currentTime + .06 });
-  M.timer = setInterval(schedule, 25); A.keepAwake(true); $("#mStart", mel).textContent = "Detener"; progInfo();
+  M.timer = setInterval(schedule, 25); A.keepAwake(true); practiceStart("metro"); $("#mStart", mel).textContent = "Detener"; progInfo();
 }
 function stopMetro() { if (M.run) toggleMetro(); }
 
@@ -276,7 +276,7 @@ function toggleJam() {
   if (J.run) { stopJam(); return; }
   stopMetro(); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo")); window.dispatchEvent(new Event("riff:stop-cambios"));
   Object.assign(J, { run: true, step: 0, bar: 0, next: a.currentTime + .1, startedAt: performance.now() });
-  J.timer = setInterval(jamSchedule, 25); A.keepAwake(true); $("#jStart", jel).textContent = "Detener";
+  J.timer = setInterval(jamSchedule, 25); A.keepAwake(true); practiceStart("jam"); $("#jStart", jel).textContent = "Detener";
   J.stats = { tone: 0, scale: 0, out: 0 }; J.heard = null;
   if (J.listen) startJamListen();
   paintHeard();
@@ -311,10 +311,10 @@ function paintHeard() {
 }
 function stopJam() {
   if (!J.run) return;
-  J.run = false; clearInterval(J.timer); A.keepAwake(false); $("#jStart", jel).textContent = "Tocar"; stopJamListen(); J.heard = null; renderJam();
+  J.run = false; practiceEnd("jam"); clearInterval(J.timer); A.keepAwake(false); $("#jStart", jel).textContent = "Tocar"; stopJamListen(); J.heard = null; renderJam();
   const st = J.stats, n = st.tone + st.scale + st.out;
   if (J.listen && n >= 10) toast(`${n} notas: ${Math.round((st.tone + st.scale) / n * 100)}% en la escala y ${Math.round(st.tone / n * 100)}% en notas del acorde`);
   const min = (performance.now() - J.startedAt) / 60000;
-  if (min >= 1) { data.jams = data.jams || []; data.jams.push({ t: new Date().toISOString(), min: Math.round(min * 10) / 10, estilo: J.st.id }); save(); toast(`Jam de ${Math.round(min)} min registrado`); }
+  if (min >= 1) { data.jams = data.jams || []; data.jams.push({ t: new Date().toISOString(), min: Math.round(min * 10) / 10, estilo: J.st.id, ...(J.listen && n >= 20 ? { pct: Math.round((st.tone + st.scale) / n * 100) } : {}) }); save(); toast(`Jam de ${Math.round(min)} min registrado`); }
 }
 export function onHide() { stopTabs(); stopMastil(); /* el resto del audio sigue sonando si cambias de pestaña a propósito */ }

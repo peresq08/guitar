@@ -1,7 +1,7 @@
 // Grabaciones de tu práctica: graba el micrófono mientras tocas y guarda el audio en este dispositivo
 // (IndexedDB, no se sube a ningún lado). Cada grabación lleva qué estabas practicando y la fecha.
 import * as A from "./audio.js";
-import { toast } from "./store.js";
+import { toast, data, save } from "./store.js";
 
 const DB = "riff-audio", STORE = "grabaciones", MAX_MIN = 20, KEEP = 60;
 let dbp = null;
@@ -51,6 +51,7 @@ export async function startRecording(label) {
     if (secs < 2 || !blob.size) { toast("Grabación muy corta: no se guardó."); return; }
     try {
       await tx("readwrite", st => st.put({ id: "r" + Date.now().toString(36), t: Date.now(), dur: Math.round(secs), label, mime: blob.type, blob }));
+      data.grabaciones = (data.grabaciones || 0) + 1; save();
       const all = await listRecordings();
       for (const old of all.slice(KEEP)) await deleteRecording(old.id);
       toast(`Grabación guardada (${fmtDur(secs)}). Escúchala en Progreso.`);

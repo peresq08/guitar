@@ -2,7 +2,7 @@ import { data, save, streak, bestStreak, dayKey, minutesOn, exportJSON, importJS
 import { PATTERNS } from "./rasgueo.js";
 import { listRecordings, getRecording, deleteRecording, renameRecording, fmtDur, extOf } from "../recorder.js";
 const PATS = Object.fromEntries(PATTERNS.map(p => [p.id, p.nombre]));
-import { LEVELS, goalDone, toggleGoal, currentLevel, levelProgress, CATS, DIFF, difficulty } from "../plan.js";
+import { LEVELS, goalDone, toggleGoal, currentLevel, levelProgress, CATS, DIFF, difficulty, EXTRA_GOALS, EXTRA_AREAS, extraProgress } from "../plan.js";
 
 let root;
 const ESTADOS = { pendiente: "Por aprender", practicando: "Practicando", dominada: "Dominada" };
@@ -44,6 +44,24 @@ function render() {
             <button class="check ${ok ? "on" : ""} ${auto ? "auto" : ""}" ${auto ? `aria-disabled="true" title="Se marca sola con tus datos"` : `data-goal="${g.id}"`} aria-pressed="${ok}" aria-label="${esc(g.t)}">${ok ? `<svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7"/></svg>` : ""}</button>
             <span>${esc(g.t)}${auto && !ok ? ` <span class="note">(automática)</span>` : ""}</span>
             <span class="num note">${p ? Math.min(p[0], p[1]) + "/" + p[1] : ""}</span></div>`;
+        }).join("")}</div></details>`;
+    }).join("")}
+  </div>
+
+  <div class="panel" id="metasExtra">
+    <div class="row between"><div class="label">Más metas</div><span class="chip acc">${extraProgress()[0]} de ${extraProgress()[1]}</span></div>
+    <p class="note">No bloquean tu nivel: se marcan solas con lo que practicas en cada herramienta.</p>
+    ${Object.entries(EXTRA_AREAS).map(([k, name]) => {
+      const gs = EXTRA_GOALS.filter(g => g.area === k), d = gs.filter(g => g.auto()).length;
+      const next = gs.find(g => !g.auto());
+      return `<details class="level-card xgoals ${d === gs.length ? "done" : ""}">
+        <summary><span>${name}${next ? `<small class="note xnext">Siguiente: ${esc(next.t)}</small>` : ""}</span><span class="chip ${d === gs.length ? "good" : ""}">${d}/${gs.length}</span></summary>
+        <div>${gs.map(g => {
+          const ok = g.auto(), [v, m] = g.prog();
+          return `<div class="goal xgoal">
+            <span class="check auto ${ok ? "on" : ""}" aria-hidden="true">${ok ? `<svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7"/></svg>` : ""}</span>
+            <span>${esc(g.t)}${ok ? "" : `<span class="xbar" aria-hidden="true"><i style="width:${Math.min(100, v / m * 100)}%"></i></span>`}</span>
+            <span class="num note">${Math.min(v, m)}/${m}</span></div>`;
         }).join("")}</div></details>`;
     }).join("")}
   </div>
@@ -208,7 +226,7 @@ const fmtDate = t => new Date(t).toLocaleString("es-MX", { weekday: "short", day
 async function paintRecs() {
   const box = root && root.querySelector("#recPanel"); if (!box) return;
   let recs = [];
-  try { recs = await listRecordings(); } catch (e) { box.innerHTML = `<div class="label">Tus grabaciones</div><p class="note">Este navegador no permite guardar grabaciones.</p>`; return; }
+  try { recs = await listRecordings(); if (recs.length > (data.grabaciones || 0)) { data.grabaciones = recs.length; save(); } } catch (e) { box.innerHTML = `<div class="label">Tus grabaciones</div><p class="note">Este navegador no permite guardar grabaciones.</p>`; return; }
   const total = recs.reduce((a, r) => a + (r.blob?.size || 0), 0);
   box.innerHTML = `<div class="row between"><div class="label">Tus grabaciones</div>${recs.length ? `<span class="note">${recs.length} · ${total > 1048576 ? (total / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1024)) + " KB"}</span>` : ""}</div>
     ${recs.length ? `<ul class="reclist">${recs.map(r => {

@@ -55,7 +55,134 @@ export const LEVELS = [
       { id: "l5-cancion", t: "Summer of '69 completa" },
     ],
   },
+  {
+    id: 6, name: "Repertorio", lema: "Canciones completas, de principio a fin",
+    chords: ["G", "Bm", "C", "D"], pair: ["G", "Bm"], power: false,
+    goals: [
+      { id: "l6-cambio", t: "30 cambios G ↔ Bm en un minuto", auto: () => bestFor("G ↔ Bm") >= 30, prog: () => [bestFor("G ↔ Bm"), 30] },
+      { id: "l6-sec", t: "Una secuencia de canción al 90 % limpia a 100 BPM o más", auto: () => seqBest() >= 100, prog: () => [seqBest(), 100] },
+      { id: "l6-dom", t: "Marcar 3 canciones como dominadas", auto: () => dominadas() >= 3, prog: () => [dominadas(), 3] },
+      { id: "l6-country", t: "Rasgueo Country: bajo y rasgueo limpio a 90 BPM", auto: () => rasgueoBest("country") >= 90, prog: () => [rasgueoBest("country"), 90] },
+      { id: "l6-graba", t: "Grabarte tocando una canción completa y escucharte" },
+    ],
+  },
+  {
+    id: 7, name: "Tabs y riffs", lema: "Leer tablatura y tocar los riffs tal como son",
+    chords: ["E5", "G5", "A5", "C5"], pair: ["G5", "C5"], power: true,
+    goals: [
+      { id: "l7-import", t: "Importar una tab de Guitar Pro o de texto", auto: () => tabs.length >= 1, prog: () => [tabs.length, 1] },
+      { id: "l7-secciones", t: "Completar 5 secciones de tabs en modo Aprender", auto: () => tabSections() >= 5, prog: () => [tabSections(), 5] },
+      { id: "l7-tempo", t: "Una sección de tab al 90 % con tempo a velocidad original", auto: () => tabTempoBest() >= 100, prog: () => [tabTempoBest(), 100] },
+      { id: "l7-mastil", t: "Mástil: 15 notas por minuto en las cuerdas 6 y 5", auto: () => mastilBest(c => c.startsWith("01-")) >= 15, prog: () => [Math.floor(mastilBest(c => c.startsWith("01-"))), 15] },
+      { id: "l7-galope", t: "Galope limpio a 120 BPM", auto: () => rasgueoBest("galope") >= 120, prog: () => [rasgueoBest("galope"), 120] },
+    ],
+  },
+  {
+    id: 8, name: "Músico completo", lema: "Constancia, oído y soltura en todo el mástil",
+    chords: ["F", "Bm", "C#m", "G#m"], pair: ["F", "Bm"], power: false, scale: true,
+    goals: [
+      { id: "l8-racha", t: "Practicar 30 días seguidos", auto: () => bestStreak() >= 30, prog: () => [Math.max(streak(), bestStreak()), 30] },
+      { id: "l8-horas", t: "Acumular 50 horas de práctica", auto: () => totalMin() >= 3000, prog: () => [Math.floor(totalMin() / 60), 50] },
+      { id: "l8-jam", t: "Jam con micrófono: 85 % de las notas dentro de la escala", auto: () => jamBestPct() >= 85, prog: () => [jamBestPct(), 85] },
+      { id: "l8-mastil", t: "Mástil: las 6 cuerdas hasta el traste 12 a 10 notas por minuto", auto: () => mastilBest(c => c.startsWith("012345-12")) >= 10, prog: () => [Math.floor(mastilBest(c => c.startsWith("012345-12"))), 10] },
+      { id: "l8-dom", t: "Marcar 10 canciones como dominadas", auto: () => dominadas() >= 10, prog: () => [dominadas(), 10] },
+      { id: "l8-solo", t: "Tocar un solo completo de una canción que te guste" },
+    ],
+  },
 ];
+
+/* ---------- Datos para las metas automáticas ---------- */
+const totalMin = () => (data.sesiones || []).reduce((a, s) => a + (s.min || 0), 0);
+const diasPracticados = () => new Set((data.sesiones || []).map(s => s.t.slice(0, 10))).size;
+const dominadas = () => (data.canciones || []).filter(s => s.estado === "dominada").length;
+const cancionesEn = () => (data.canciones || []).filter(s => s.estado === "practicando" || s.estado === "dominada").length;
+// Mejor tempo de una ronda de secuencia con al menos 90 % de cambios limpios
+const seqBest = (f = () => true) => (data.secuencias || []).filter(f).reduce((m, q) => Math.max(m, ...(q.hist || []).filter(h => h.ratio >= .9).map(h => h.bpm)), 0);
+const seqLimpias = () => (data.secuencias || []).filter(q => (q.hist || []).some(h => h.ratio >= .9)).length;
+const seqRondas = () => (data.secuencias || []).reduce((a, q) => a + (q.hist || []).length, 0);
+const rasgPats = min => Object.values(((data.rasgueos || {}).prog) || {}).filter(g => (g.best || 0) >= min).length;
+const paresCon = n => new Set((data.intentos || []).filter(x => x.n >= n && !(x.parcial && (x.min || 1) < 1)).map(x => x.par)).size;
+const retos = () => (data.intentos || []).length;
+const bestAny = () => (data.intentos || []).filter(x => !(x.parcial && (x.min || 1) < 1)).reduce((m, x) => Math.max(m, x.n), 0);
+const tp = () => Object.values(data.tabsProg || {});
+const tabSections = () => tp().reduce((a, p) => a + Object.entries(p).filter(([k, v]) => /^b\d+-\d+$/.test(k) && v && v.med != null).length, 0);
+const tabTempoBest = () => tp().reduce((m, p) => Math.max(m, ...Object.values(p.tempo || {}).filter(r => r.pct >= .9).map(r => Math.round(r.vel * 100))), 0);
+const tabPasadas = () => tp().reduce((a, p) => a + Object.values(p.tempo || {}).reduce((b, r) => b + (r.pasadas || 0), 0), 0);
+const mastilBest = (f = () => true) => Object.entries((data.mastil || {}).best || {}).filter(([k]) => f(k)).reduce((m, [, v]) => Math.max(m, v), 0);
+const jamMin = () => (data.jams || []).reduce((a, j) => a + (j.min || 0), 0);
+const jamBestPct = () => (data.jams || []).reduce((m, j) => Math.max(m, j.pct || 0), 0);
+const jamEstilos = () => new Set((data.jams || []).map(j => j.estilo)).size;
+const propios = () => Object.keys(data.acordesPropios || {}).length;
+const grabaciones = () => data.grabaciones || 0;
+const metroMin = () => (data.sesiones || []).filter(s => s.tipo === "metro").reduce((a, s) => a + s.min, 0);
+
+// Metas extra: no bloquean los niveles; se van marcando solas con lo que practicas.
+const G = (id, area, t, val, meta, unidad = "") => ({ id: "x-" + id, area, t, auto: () => val() >= meta, prog: () => [Math.floor(val()), meta], unidad });
+export const EXTRA_AREAS = { constancia: "Constancia", cambios: "Cambios de acordes", ritmo: "Rasgueo y ritmo", secuencias: "Secuencias", tabs: "Tabs", mastil: "Mástil", jam: "Jam e improvisación", repertorio: "Repertorio", creatividad: "Grabaciones y acordes propios" };
+export const EXTRA_GOALS = [
+  G("dias3", "constancia", "Practicar 3 días seguidos", () => Math.max(streak(), bestStreak()), 3),
+  G("dias14", "constancia", "Racha de 14 días", () => Math.max(streak(), bestStreak()), 14),
+  G("dias60", "constancia", "Racha de 60 días", () => Math.max(streak(), bestStreak()), 60),
+  G("dias100", "constancia", "Racha de 100 días", () => Math.max(streak(), bestStreak()), 100),
+  G("total10", "constancia", "Practicar en 10 días distintos", diasPracticados, 10),
+  G("total50", "constancia", "Practicar en 50 días distintos", diasPracticados, 50),
+  G("horas5", "constancia", "5 horas de práctica en total", () => totalMin() / 60, 5),
+  G("horas20", "constancia", "20 horas de práctica en total", () => totalMin() / 60, 20),
+  G("horas100", "constancia", "100 horas de práctica en total", () => totalMin() / 60, 100),
+  G("metro", "constancia", "60 minutos tocando con el metrónomo", metroMin, 60),
+
+  G("retos10", "cambios", "Hacer 10 retos de cambios", retos, 10),
+  G("retos100", "cambios", "Hacer 100 retos de cambios", retos, 100),
+  G("pares5", "cambios", "5 pares distintos con 30 cambios o más", () => paresCon(30), 5),
+  G("pares10", "cambios", "10 pares distintos con 30 cambios o más", () => paresCon(30), 10),
+  G("c60", "cambios", "60 cambios en un minuto (cualquier par)", bestAny, 60),
+  G("c80", "cambios", "80 cambios en un minuto (cualquier par)", bestAny, 80),
+  G("dc", "cambios", "40 cambios D ↔ C en un minuto", () => bestFor("D ↔ C") || bestFor("C ↔ D"), 40),
+  G("fbb", "cambios", "25 cambios F ↔ Bb en un minuto", () => bestFor("F ↔ Bb") || bestFor("Bb ↔ F"), 25),
+
+  G("rasg3", "ritmo", "3 patrones de rasgueo limpios a 80 BPM", () => rasgPats(80), 3),
+  G("rasg6", "ritmo", "6 patrones de rasgueo limpios a 90 BPM", () => rasgPats(90), 6),
+  G("balada", "ritmo", "Balada limpia a 80 BPM", () => rasgueoBest("balada"), 80),
+  G("rock8", "ritmo", "Rock en corcheas limpio a 120 BPM", () => rasgueoBest("rock8"), 120),
+  G("boom", "ritmo", "Boom-chicka limpio a 110 BPM", () => rasgueoBest("boomchicka"), 110),
+  G("shuffle", "ritmo", "Shuffle de blues limpio a 90 BPM", () => rasgueoBest("shuffle"), 90),
+  G("funk", "ritmo", "Funk 1 limpio a 80 BPM", () => rasgueoBest("funk1"), 80),
+  G("rapido", "ritmo", "Corcheas abajo limpias a 140 BPM", () => rasgueoBest("rapido"), 140),
+
+  G("seq1", "secuencias", "Terminar 10 rondas de secuencias", seqRondas, 10),
+  G("seq100", "secuencias", "Terminar 100 rondas de secuencias", seqRondas, 100),
+  G("seqL3", "secuencias", "3 secuencias distintas al 90 % limpias", seqLimpias, 3),
+  G("seqL10", "secuencias", "10 secuencias distintas al 90 % limpias", seqLimpias, 10),
+  G("seq80", "secuencias", "Una secuencia al 90 % a 80 BPM", () => seqBest(), 80),
+  G("seq130", "secuencias", "Una secuencia al 90 % a 130 BPM", () => seqBest(), 130),
+
+  G("tab1", "tabs", "Completar tu primera sección en modo Aprender", tabSections, 1),
+  G("tab20", "tabs", "Completar 20 secciones en modo Aprender", tabSections, 20),
+  G("tabs5", "tabs", "Tener 5 tabs importadas", () => tabs.length, 5),
+  G("tabT", "tabs", "Una sección al 90 % con tempo al 70 % de velocidad", tabTempoBest, 70),
+  G("tabP", "tabs", "25 pasadas completas con tempo", tabPasadas, 25),
+
+  G("ms5", "mastil", "Mástil: 5 notas por minuto", () => mastilBest(), 5),
+  G("ms20", "mastil", "Mástil: 20 notas por minuto", () => mastilBest(), 20),
+  G("ms6", "mastil", "Mástil: encontrar notas en las 6 cuerdas a 8 por minuto", () => mastilBest(k => k.startsWith("012345")), 8),
+  G("ms30", "mastil", "Mástil: 30 notas por minuto", () => mastilBest(), 30),
+
+  G("jam10", "jam", "10 minutos de Jam en total", jamMin, 10),
+  G("jam60", "jam", "60 minutos de Jam en total", jamMin, 60),
+  G("jamE", "jam", "Improvisar en 5 estilos distintos", jamEstilos, 5),
+  G("jam70", "jam", "Jam con micrófono: 70 % de notas en la escala", jamBestPct, 70),
+
+  G("rep5", "repertorio", "Tener 5 canciones en práctica o dominadas", cancionesEn, 5),
+  G("dom1", "repertorio", "Dominar tu primera canción", dominadas, 1),
+  G("dom5", "repertorio", "Dominar 5 canciones", dominadas, 5),
+  G("dom20", "repertorio", "Dominar 20 canciones", dominadas, 20),
+
+  G("rec1", "creatividad", "Hacer tu primera grabación", grabaciones, 1),
+  G("rec10", "creatividad", "Hacer 10 grabaciones", grabaciones, 10),
+  G("ac1", "creatividad", "Crear tu primer acorde", propios, 1),
+  G("ac5", "creatividad", "Crear 5 acordes propios", propios, 5),
+];
+export const extraProgress = () => { const d = EXTRA_GOALS.filter(g => g.auto()).length; return [d, EXTRA_GOALS.length]; };
 
 const rasgueoBest = id => ((data.rasgueos || {}).prog || {})[id]?.best || 0;
 export const goalDone = g => !!data.metas[g.id] || (g.auto ? g.auto() : false);
@@ -232,6 +359,35 @@ export const LIBRARY = [
   { titulo: "Mr. Jones", artista: "Counting Crows", anio: 1993, nivel: 2, bpm: 140, rasgueo: "pop", cat: "rock90", tip: "Am, F (mini), Dm y G; el coro sube a C.", secuencias: [{ nombre: "estrofa", acordes: "Am F (mini) Dm G" }, { nombre: "coro", acordes: "C F (mini) G G" }] },
   { titulo: "Hey Jealousy", artista: "Gin Blossoms", anio: 1992, nivel: 5, bpm: 120, rasgueo: "rock8", cat: "rock90", tip: "D, E y F#m (cejilla); la segunda parte alterna A y D.", secuencias: [{ nombre: "estrofa", acordes: "D E F#m E" }, { nombre: "segunda parte", acordes: "A D A D" }] },
   { titulo: "No Rain", artista: "Blind Melon", anio: 1992, nivel: 1, bpm: 148, rasgueo: "pop", cat: "rock90", tip: "E, D, A y G con aire acústico.", secuencias: [{ nombre: "estrofa", acordes: "E D A G" }] },
+  // Tanda 5: más 70s, 80s, 90s, country y rock en español (acordes de hojas públicas de e-chords; "simplificada" cuando se cambia un acorde por uno más fácil)
+  { titulo: "Desperado", artista: "Eagles", anio: 1973, nivel: 3, rasgueo: "balada", cat: "rock70", tip: "Balada lenta: el paso de C a Cm es el color de la canción. Tómala a 40–50 BPM al principio.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "G G7 C Cm G Em A7 D7" }] },
+  { titulo: "Dust in the Wind", artista: "Kansas", anio: 1977, nivel: 3, rasgueo: "balada", cat: "rock70", tip: "Va con arpegio (fingerpicking); la grabación está medio tono abajo. Practica los cambios lentos con la mano derecha suelta.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "C G Am G Dm7 Am" }] },
+  { titulo: "Free Bird", artista: "Lynyrd Skynyrd", anio: 1973, nivel: 4, rasgueo: "balada", cat: "clasico", tip: "La parte lenta usa F con cejilla; la base del solo es G, Bb y C.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "G D Em F C D" }, { nombre: "base del solo", acordes: "G Bb C C" }] },
+  { titulo: "Margaritaville", artista: "Jimmy Buffett", anio: 1977, nivel: 1, rasgueo: "country", cat: "folk", tip: "D y A en la estrofa; el coro suma G y un D7.", secuencias: [{ nombre: "estrofa", acordes: "D D D A A A A D" }, { nombre: "coro", acordes: "G A D D7 G A D D7" }] },
+  { titulo: "Sandman", artista: "America", anio: 1971, nivel: 2, rasgueo: "rock8", cat: "rock70", tip: "Bajada Am, G, F, Em con rasgueo insistente; el F va en versión mini.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "Am G F(mini) Em" }, { nombre: "puente", acordes: "Am D G Am" }] },
+  { titulo: "Wanted Dead or Alive", artista: "Bon Jovi", anio: 1986, nivel: 2, rasgueo: "balada", cat: "metal", tip: "Acústica de 12 cuerdas en la grabación. D, C y G con mucho aire.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "D D C G C G" }, { nombre: "coro (simplificada)", acordes: "C G F(mini) D" }] },
+  { titulo: "Wind of Change", artista: "Scorpions", anio: 1990, nivel: 2, bpm: 76, rasgueo: "balada", cat: "metal", tip: "C y Dm alternados; el coro sube con G y cierra en Am, F y G.", secuencias: [{ nombre: "estrofa", acordes: "C Dm C Dm Am G" }, { nombre: "coro (simplificada)", acordes: "C G Dm G C G Dm G Am F(mini) G G" }] },
+  { titulo: "Eye of the Tiger", artista: "Survivor", anio: 1982, nivel: 3, bpm: 109, rasgueo: "rapido", cat: "rock80", tip: "Estrofa en Cm, Ab y Bb; aquí va con power chords y palm mute.", secuencias: [{ nombre: "estrofa (power chords)", acordes: "C5 Ab5 Bb5 C5" }] },
+  { titulo: "Mad World", artista: "Tears for Fears", anio: 1982, nivel: 2, rasgueo: "pop", cat: "rock80", tip: "Am, C, G y D en la estrofa; el coro repite Am, C y D.", secuencias: [{ nombre: "estrofa", acordes: "Am C G D" }, { nombre: "coro", acordes: "Am C D D" }] },
+  { titulo: "Nothing Else Matters", artista: "Metallica", anio: 1991, nivel: 2, rasgueo: "balada", cat: "metal", tip: "Arpegio en Em con cuerdas al aire; el coro usa C, Am y D.", secuencias: [{ nombre: "estrofa", acordes: "Em D C Em D C" }, { nombre: "coro", acordes: "C Am D D C Am D Em" }] },
+  { titulo: "Tears in Heaven", artista: "Eric Clapton", anio: 1992, nivel: 4, bpm: 80, rasgueo: "balada", cat: "pop", tip: "Arpegio suave. F#m con cejilla; las inversiones del original van aquí simplificadas.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "A E F#m D A E" }] },
+  { titulo: "Breakfast at Tiffany's", artista: "Deep Blue Something", anio: 1995, nivel: 1, rasgueo: "pop", cat: "rock90", tip: "Solo D, G y A. Ideal para rasgueo parejo.", secuencias: [{ nombre: "estrofa", acordes: "D G A A" }, { nombre: "coro", acordes: "D A G G" }] },
+  { titulo: "Torn", artista: "Natalie Imbruglia", anio: 1997, nivel: 5, bpm: 96, rasgueo: "pop", cat: "pop", tip: "En Fa: F y Bb con cejilla. Si cuesta, usa capo y tócala en otra tonalidad.", secuencias: [{ nombre: "estrofa", acordes: "F Am Bb F Am Bb Dm C" }, { nombre: "coro", acordes: "F C Dm Bb" }] },
+  { titulo: "Linger", artista: "The Cranberries", anio: 1993, nivel: 2, rasgueo: "balada", cat: "rock90", tip: "D, A, C y G en arpegio lento.", secuencias: [{ nombre: "estrofa", acordes: "D A C G" }] },
+  { titulo: "Kryptonite", artista: "3 Doors Down", anio: 2000, nivel: 3, bpm: 99, rasgueo: "rock8", cat: "rock90", tip: "Bm, G y A todo el tema; el reto es el Bm limpio a tempo.", secuencias: [{ nombre: "estrofa", acordes: "Bm G A A" }] },
+  { titulo: "Burn, Burn, Burn", artista: "Zach Bryan", anio: 2022, nivel: 2, rasgueo: "country", cat: "country", tip: "C, Am y G en la estrofa; el coro arranca en Am.", secuencias: [{ nombre: "estrofa", acordes: "C Am G C" }, { nombre: "coro (simplificada)", acordes: "Am F(mini) C G" }] },
+  { titulo: "Broken Halos", artista: "Chris Stapleton", anio: 2017, nivel: 1, rasgueo: "country", cat: "country", tip: "G, Cadd9 y Em7: casi no mueves los dedos 3 y 4.", secuencias: [{ nombre: "estrofa", acordes: "G Cadd9 G Em7" }] },
+  { titulo: "Harlan Road", artista: "Tyler Childers", anio: 2011, nivel: 2, rasgueo: "country", cat: "country", tip: "E, C y Dm con aire de bluegrass.", secuencias: [{ nombre: "estrofa", acordes: "E C Dm E" }] },
+  { titulo: "Purgatory", artista: "Tyler Childers", anio: 2017, nivel: 1, rasgueo: "country", cat: "country", tip: "C, G y D con bajo alternado; muy buena para el rasgueo country.", secuencias: [{ nombre: "estrofa", acordes: "C G C G D C G G" }] },
+  { titulo: "Bury My Bones", artista: "Whiskey Myers", anio: 2014, nivel: 1, rasgueo: "balada", cat: "country", tip: "Em, D, G y D; el bajo en F# del original va aquí como D simple.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "Em D G D" }] },
+  { titulo: "Early Morning Shakes", artista: "Whiskey Myers", anio: 2014, nivel: 2, rasgueo: "rock8", cat: "country", tip: "E, G y A con distorsión sureña.", secuencias: [{ nombre: "estrofa", acordes: "E G A E" }] },
+  { titulo: "Dogwood", artista: "Whiskey Myers", anio: 2016, nivel: 1, rasgueo: "balada", cat: "country", tip: "Em, C, G y D todo el tema: perfecta para arpegiar.", secuencias: [{ nombre: "estrofa", acordes: "Em C G D" }] },
+  { titulo: "Rayando el sol", artista: "Maná", anio: 1990, nivel: 3, rasgueo: "pop", cat: "espanol", tip: "G, C y D en la estrofa; el coro pasa por Bm.", secuencias: [{ nombre: "estrofa", acordes: "G C D C" }, { nombre: "coro", acordes: "G D Em C G Bm C D" }] },
+  { titulo: "Oye mi amor", artista: "Maná", anio: 1992, nivel: 3, rasgueo: "rock8", cat: "espanol", tip: "Estrofa Bm y A; el coro gira en D, A, Bm y G.", secuencias: [{ nombre: "estrofa", acordes: "Bm A Bm Bm" }, { nombre: "coro", acordes: "D A Bm G" }] },
+  { titulo: "Afuera", artista: "Caifanes", anio: 1994, nivel: 4, rasgueo: "rock8", cat: "espanol", tip: "En Si menor: Bm, Em y E; cierra con G, A y Bm.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "Bm Em E Bm" }, { nombre: "cierre", acordes: "G A Bm Bm" }] },
+  { titulo: "Flaca", artista: "Andrés Calamaro", anio: 1997, nivel: 2, rasgueo: "balada", cat: "espanol", tip: "G, B7, Em y C; el B7 es el cambio a cuidar.", secuencias: [{ nombre: "estrofa", acordes: "G B7 Em C G D7 G D7" }] },
+  { titulo: "Té para tres", artista: "Soda Stereo", anio: 1990, nivel: 2, rasgueo: "balada", cat: "espanol", tip: "Arpegio suave entre D y Em7.", secuencias: [{ nombre: "estrofa (simplificada)", acordes: "D Em7 D Em7 G A Em7 D" }] },
+  { titulo: "Eres", artista: "Café Tacvba", anio: 2003, nivel: 2, rasgueo: "balada", cat: "espanol", tip: "Am, C y E7; el coro suma F.", secuencias: [{ nombre: "estrofa", acordes: "Am C E E7" }, { nombre: "coro (simplificada)", acordes: "Am C F(mini) E7" }] },
 ];
 // Categorías y dificultad para ordenar el repertorio
 export const CATS = {

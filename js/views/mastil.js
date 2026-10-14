@@ -1,6 +1,6 @@
 // Notas en el mástil: la app te pide una nota en una cuerda ("La en la 5ª cuerda") y la comprueba por el micrófono.
 // Saber dónde está cada nota es la base para leer menos tabs, encontrar raíces de acordes con cejilla y hacer solos.
-import { data, save, toast, esc, logSession, $ } from "../store.js";
+import { data, save, toast, esc, practiceStart, practiceEnd, $ } from "../store.js";
 import * as A from "../audio.js";
 import { Feedback, swapText } from "../ui/highway.js";
 
@@ -70,7 +70,7 @@ export function mountMastil(container) {
   $("#msRange", el).onchange = e => { cfg().hasta = +e.target.value; save(); paint(); };
   $("#msNat", el).onchange = e => { cfg().naturales = e.target.checked; save(); paint(); };
   $("#msMic", el).onchange = e => { data.ajustes.mastilMic = e.target.checked; save(); };
-  $("#msStart", el).onclick = () => S.run ? stop() : start();
+  $("#msStart", el).onclick = () => { if (!S.run) return start(); const el2 = performance.now() - S.startedAt; if (S.good >= 3 && el2 >= 20000) finish(el2 / 60000); else stop(); };
   $("#msSkip", el).onclick = () => { if (S.run) answer(false); };
   $("#msShow", el).onclick = () => {
     if (!S.run) return;
@@ -136,7 +136,7 @@ async function start() {
   $("#msShow", el).hidden = S.mic; $("#msSkip", el).hidden = false; $("#msSkip", el).textContent = S.mic ? "Saltar" : "No la sabía";
   $("#msShow", el).textContent = "Ver dónde está"; $("#msShow", el).removeAttribute("data-primary");
   next();
-  S.iv = setInterval(tick, 40); A.keepAwake(true);
+  S.iv = setInterval(tick, 40); A.keepAwake(true); practiceStart("mastil");
 }
 function next() {
   const p = pool().filter(q => !S.cur || !(q.s === S.cur.s && q.pc === S.cur.pc) || pool().length < 2);
@@ -183,18 +183,17 @@ function progLine() {
   const left = Math.max(0, (S.endAt - performance.now()) / 1000);
   $("#msProg", el).innerHTML = `<div class="row between"><span><b>${S.good}</b> ${S.good === 1 ? "nota" : "notas"} encontradas${S.n - S.good ? ` · ${S.n - S.good} saltadas` : ""}</span><span class="num">${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, "0")}</span></div>`;
 }
-function finish() {
-  const c = cfg(), k = keyOf(c), min = (data.ajustes.mastilMin || 1), npm = S.good / min, prev = c.best[k] || 0;
+function finish(partMin) {
+  const c = cfg(), k = keyOf(c), full = (data.ajustes.mastilMin || 1), min = partMin || full, npm = S.good / min, prev = c.best[k] || 0;
   if (npm > prev) c.best[k] = Math.round(npm * 10) / 10;
   stop(true);
   const med = S.times.length ? S.times.slice().sort((a, b) => a - b)[S.times.length >> 1] : null;
-  $("#msProg", el).innerHTML = `<span><b>${S.good} notas en ${min} ${min === 1 ? "minuto" : "minutos"}</b>${med ? ` · ${med.toFixed(1)} s por nota` : ""}${npm > prev && prev ? " · ¡nuevo récord!" : ""}</span>`;
+  $("#msProg", el).innerHTML = `<span><b>${S.good} notas en ${partMin ? `${Math.floor(min)}:${String(Math.round(min * 60 % 60)).padStart(2, "0")} (detenido antes)` : `${min} ${min === 1 ? "minuto" : "minutos"}`}</b> · ${Math.round(npm * 10) / 10} por minuto${med ? ` · ${med.toFixed(1)} s por nota` : ""}${npm > prev && prev ? " · ¡nuevo récord!" : ""}</span>`;
   toast(npm > prev && prev ? `¡Récord: ${Math.round(npm * 10) / 10} notas por minuto!` : `${S.good} notas encontradas`);
 }
 function stop(keep) {
   clearInterval(S.iv); S.run = false; A.stopOnsets(); A.keepAwake(false);
-  const min = (performance.now() - S.startedAt) / 60000;
-  if (min >= .5) logSession(Math.round(min * 10) / 10, "mastil"); else save();
+  practiceEnd("mastil"); save();
   $("#msStage", el).classList.remove("live"); $("#msStart", el).textContent = "Empezar";
   $("#msShow", el).hidden = true; $("#msSkip", el).hidden = true; $("#msShow", el).removeAttribute("data-primary");
   $("#msLab", el).textContent = "Listo"; $("#msHeard", el).textContent = "–"; $("#msBar", el).style.width = "0";

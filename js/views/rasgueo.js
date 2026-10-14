@@ -1,6 +1,6 @@
 // Entrenador de rasgueo: patrones en corcheas, semicorcheas o tresillos, sonido guía, tempo que sube
 // poco a poco y calificación del tiempo de cada golpe con el micrófono.
-import { data, save, toast, esc, $ } from "../store.js";
+import { data, save, toast, esc, practiceStart, practiceEnd, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { Highway, Feedback, swapText } from "../ui/highway.js";
@@ -243,7 +243,12 @@ export function playHit(c, frets, t, slot) {
   A.strum(down ? frets : frets.slice(0, 6), t, { down, gap: down ? .011 : .009, vol: (down ? .22 : .15) * (acc ? 1.6 : 1), dur });
 }
 async function toggle() {
-  if (R.run) { stop(true); return; }
+  if (R.run) {
+    // detenida antes de terminar: con dos compases o más, se califica lo que alcanzaste a tocar
+    if (R.bars >= 2 && !R.finishing) { const now = A.now(); R.hits = R.hits.filter(h => h.t < now - .1); R.partial = true; R.finishing = true; finishAt(now); return; }
+    stop(true); return;
+  }
+  R.partial = false; R.finishing = false;
   const a = A.ctx(); if (!a) return;
   R.listen = $("#rgMic", el).checked;
   if (R.listen) {
@@ -269,10 +274,11 @@ async function toggle() {
   hw.run(() => A.now()); R.lastUi = -1; R.startBpm = R.bpm;
   if (R.listen && R.guide) warnGuideEcho();
   if (R.listen) A.startOnsets(t => { R.onsets.push(t); hw.tick(t, "hit"); });
-  R.run = true; $("#rgStage", el).classList.add("live"); $("#rgStart", el).textContent = "Detener"; $("#rgResult", el).hidden = true;
+  R.run = true; practiceStart("rasgueo"); $("#rgStage", el).classList.add("live"); $("#rgStart", el).textContent = "Detener"; $("#rgResult", el).hidden = true;
   R.timer = setInterval(tick, 25); A.keepAwake(true); tick();
 }
 function stop(cancel) {
+  practiceEnd("rasgueo");
   R.run = false; clearInterval(R.timer); hw.stop(); A.keepAwake(false); if (R.listen) setTimeout(A.stopOnsets, 300);
   $("#rgStart", el).textContent = "Empezar"; $("#rgStage", el).classList.remove("live");
   if (cancel) {
@@ -357,7 +363,7 @@ function liveJudge(now) {
 function finishAt(tEnd) {
   clearInterval(R.timer);
   const wait = Math.max(0, (tEnd - A.now()) * 1000) + 350;   // deja que el último golpe se escuche y se detecte
-  setTimeout(() => { liveJudge(A.now() + 1); stop(false); A.chime(); $("#rgLab", el).textContent = "Ronda terminada"; $("#rgSub", el).textContent = R.listen ? "Mira tu resultado abajo" : "¿Cómo te salió?"; grade(); }, wait);
+  setTimeout(() => { R.finishing = false; liveJudge(A.now() + 1); stop(false); A.chime(); $("#rgLab", el).textContent = R.partial ? `Ronda detenida en el compás ${R.bars + 1}` : "Ronda terminada"; $("#rgSub", el).textContent = R.listen ? "Mira tu resultado abajo" : "¿Cómo te salió?"; grade(); }, wait);
 }
 
 /* ---------- Calificación ---------- */

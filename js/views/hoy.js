@@ -1,10 +1,34 @@
-import { data, save, logSession, bestFor, toast, esc, $ } from "../store.js";
-import { currentLevel, levelProgress, nextGoal, buildRoutine } from "../plan.js";
+import { data, save, logSession, bestFor, toast, esc, $, setRoutineRunning } from "../store.js";
+import { currentLevel, levelProgress, nextGoal, buildRoutine, LEVELS, EXTRA_GOALS } from "../plan.js";
 import { diagram } from "../chords.js";
 import { chime, ctx, keepAwake } from "../audio.js";
 
 let root, mini;
-const R = { blocks: [], i: 0, left: 0, run: false, last: 0, done: [], practiced: 0, tick: null, finished: false };
+const R = { blocks: [], i: 0, left: 0, run: false, last: 0, done: [], practiced: 0, tick: null, finished: false, ses: null, beat: 0 };
+// La rutina se guarda mientras avanza: si pausas, cierras la app o cambias de pestaña, lo practicado ya cuenta
+// y al volver hoy mismo sigue donde se quedó.
+const RKEY = "riff-rutina", today = () => new Date().toDateString();
+function persist() {
+  try { localStorage.setItem(RKEY, JSON.stringify({ d: today(), blocks: R.blocks, i: R.i, left: R.left, done: R.done, practiced: R.practiced, finished: R.finished, ses: R.ses })); } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(RKEY) || "null");
+    if (s && s.d === today() && s.practiced > 0 && s.blocks?.length) {
+      Object.assign(R, { blocks: s.blocks, i: Math.min(s.i, s.blocks.length - 1), left: s.left, done: s.done || [], practiced: s.practiced, finished: !!s.finished, ses: s.ses || null, run: false });
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+// Una sola sesión por rutina que se va actualizando con los minutos reales
+function logProgress() {
+  if (R.practiced < 30) { persist(); return; }
+  let e = R.ses && data.sesiones.find(x => x.t === R.ses);
+  if (!e) { R.ses = new Date().toISOString(); e = { t: R.ses, min: 1, tipo: "rutina" }; data.sesiones.push(e); }
+  e.min = Math.max(1, Math.round(R.practiced / 60)); save(); persist();
+}
+function pause() { R.run = false; clearInterval(R.tick); keepAwake(false); setRoutineRunning(false); logProgress(); }
 const seqFor = song => song && (data.secuencias || []).find(q => q.cancion === song.id && q.acordes.length > 1);
 const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
 const goTo = (view, opts) => window.dispatchEvent(new CustomEvent("riff:go", { detail: { view, opts } }));
@@ -19,8 +43,9 @@ function ring(done, total) {
 }
 
 function resetRoutine() {
-  clearInterval(R.tick); keepAwake(false);
-  Object.assign(R, { blocks: buildRoutine(), i: 0, run: false, done: [], practiced: 0, finished: false });
+  clearInterval(R.tick); keepAwake(false); setRoutineRunning(false);
+  Object.assign(R, { blocks: buildRoutine(), i: 0, run: false, done: [], practiced: 0, finished: false, ses: null });
+  try { localStorage.removeItem(RKEY); } catch (e) {}
   R.left = R.blocks[0].min * 60;
 }
 
@@ -30,12 +55,16 @@ export function mount(el) {
   mini.className = "btn dark minibar"; mini.hidden = true;
   mini.addEventListener("click", () => goTo("hoy"));
   document.body.appendChild(mini);
-  resetRoutine();
+  if (!restore()) resetRoutine();
+  document.addEventListener("visibilitychange", () => { if (document.hidden && R.practiced > 0) logProgress(); });
+  window.addEventListener("pagehide", () => { if (R.practiced > 0) logProgress(); });
   render();
 }
 
 function render() {
-  const l = currentLevel(), [d, t] = levelProgress(l), g = nextGoal(l);
+  const l = currentLevel(), [d, t] = levelProgress(l), lg = nextGoal(l);
+  // Si ya cumpliste las metas del nivel, la siguiente es la meta extra más cercana
+  const g = lg || EXTRA_GOALS.filter(x => !x.auto()).map(x => ({ x, r: (([v, m]) => v / m)(x.prog()) })).sort((a, b) => b.r - a.r)[0]?.x;
   const gp = g && g.prog ? g.prog() : null;
   const b = R.blocks[R.i];
   root.innerHTML = `
@@ -58,8 +87,9 @@ function render() {
       ${R.finished ? "" : `<button class="btn primary" id="hStart" data-primary>${R.run ? "Pausa" : (R.practiced > 0 ? "Continuar" : "Empezar")}</button><button class="btn" id="hSkip">Siguiente</button>`}
       <button class="btn" id="hReset">Reiniciar</button>
     </div>
-    ${R.finished ? `<div class="panel hl"><h3>¡Bien hecho!</h3><p>Practicaste ${Math.max(1, Math.round(R.practiced / 60))} minutos.</p>
-      <div class="row"><button class="btn primary" id="hSave">Guardar sesión</button></div></div>` : ""}
+    ${R.finished ? `<div class="panel hl"><h3>¡Bien hecho!</h3><p>Practicaste ${Math.max(1, Math.round(R.practiced / 60))} minutos y ya quedaron guardados en tu racha.</p>
+      <div class="row"><button class="btn primary" id="hSave">Nueva rutina</button></div></div>` : ""}
+    ${!R.finished && !R.run && R.practiced >= 30 ? `<p class="note">Llevas ${fmt(R.practiced)} de práctica guardados. Si cierras la app, aquí sigue tu rutina hoy.</p>` : ""}
     <ol class="steps">${R.blocks.map((x, k) => `<li class="${R.done[k] ? "done" : ""} ${k === R.i && !R.finished ? "cur" : ""}"><span class="dot"></span><span>${esc(x.n)}</span><span class="t">${x.min} min</span></li>`).join("")}</ol>
     <div class="row between">
       <span class="note">Duración</span>
@@ -74,7 +104,7 @@ function render() {
     <div class="hero">
       ${ring(d, t)}
       <div class="stack" style="gap:4px;min-width:0">
-        <div class="label">Nivel ${l.id} de 5</div>
+        <div class="label">Nivel ${l.id} de ${LEVELS.length}</div>
         <h2>${l.name}</h2>
         <p class="muted">${l.lema}</p>
       </div>
@@ -108,15 +138,16 @@ function bind() {
   $("#hTool", root)?.addEventListener("click", () => goTo("practicar", { tab: b.tool, pair: b.pair, mode: b.mode, pattern: b.pattern, tabId: b.tabId, tabPista: b.tabPista, tabSel: b.tabSel, tabMode: b.tabMode }));
   $("#hStart", root)?.addEventListener("click", () => {
     ctx();
-    if (R.run) { R.run = false; clearInterval(R.tick); keepAwake(false); }
-    else { R.run = true; R.last = performance.now(); R.tick = setInterval(loop, 250); keepAwake(true); }
+    if (R.run) pause();
+    else { R.run = true; R.last = performance.now(); R.beat = R.last; R.tick = setInterval(loop, 250); keepAwake(true); setRoutineRunning(true); }
     render();
   });
-  $("#hSkip", root)?.addEventListener("click", () => { R.done[R.i] = true; advance(); render(); });
-  $("#hReset", root).onclick = () => { resetRoutine(); render(); };
-  $("#hSave", root)?.addEventListener("click", () => {
-    logSession(R.practiced / 60, "rutina"); toast("Sesión guardada. ¡Sigue la racha!"); resetRoutine(); render();
-  });
+  $("#hSkip", root)?.addEventListener("click", () => { R.done[R.i] = true; advance(); persist(); render(); });
+  $("#hReset", root).onclick = () => {
+    if (R.practiced >= 30) { logProgress(); toast(`Guardé tus ${Math.max(1, Math.round(R.practiced / 60))} minutos. Rutina nueva lista.`); }
+    resetRoutine(); render();
+  };
+  $("#hSave", root)?.addEventListener("click", () => { resetRoutine(); render(); });
   root.querySelectorAll("[data-min]").forEach(btn => btn.onclick = () => {
     if (R.run || R.practiced > 0) { toast("Reinicia la rutina para cambiar la duración"); return; }
     data.ajustes.rutinaMin = +btn.dataset.min; save(); resetRoutine(); render();
@@ -129,11 +160,12 @@ function bind() {
 
 function advance() {
   if (R.i < R.blocks.length - 1) { R.i++; R.left = R.blocks[R.i].min * 60; }
-  else { R.run = false; R.left = 0; R.finished = true; clearInterval(R.tick); keepAwake(false); }
+  else { R.run = false; R.left = 0; R.finished = true; clearInterval(R.tick); keepAwake(false); setRoutineRunning(false); logProgress(); toast("Rutina terminada. ¡Sigue la racha!"); }
 }
 function loop() {
   const t = performance.now(), dt = (t - R.last) / 1000; R.last = t; R.left -= dt; R.practiced += dt;
-  if (R.left <= 0) { chime(); R.done[R.i] = true; advance(); render(); return; }
+  if (R.left <= 0) { chime(); R.done[R.i] = true; advance(); persist(); render(); return; }
+  if (t - R.beat > 15000) { R.beat = t; logProgress(); }
   if (!root.hidden) {
     const big = root.querySelector("#hBig"), bar = root.querySelector("#hBar");
     if (big) big.textContent = fmt(Math.ceil(R.left));

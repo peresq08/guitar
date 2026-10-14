@@ -91,9 +91,21 @@ export function bestStreak() {
   }
   return best;
 }
-export function bestFor(par) { return data.intentos.filter(x => x.par === par).reduce((m, x) => Math.max(m, x.n), 0); }
+// Las rondas detenidas antes del minuto no cuentan para el récord (al normalizar por minuto se inflarían)
+export function bestFor(par) { return data.intentos.filter(x => x.par === par && !(x.parcial && (x.min || 1) < 1)).reduce((m, x) => Math.max(m, x.n), 0); }
 export function minutesOn(k) { return data.sesiones.filter(s => dayKey(s.t) === k).reduce((a, s) => a + (s.min || 0), 0); }
 
+// Tiempo de práctica: cada herramienta marca cuándo empieza y termina; al terminar se registra en tus minutos
+// (aunque detengas antes de tiempo). Mientras corre la rutina de Hoy, la rutina es la que cuenta el tiempo.
+const active = new Map(); let routineRunning = false;
+export function setRoutineRunning(v) { routineRunning = !!v; }
+export function practiceStart(key) { if (!active.has(key)) active.set(key, performance.now()); }
+export function practiceEnd(key, tipo = key) {
+  const t0 = active.get(key); active.delete(key); if (t0 == null) return 0;
+  const min = (performance.now() - t0) / 60000;
+  if (min >= .5 && !routineRunning) logSession(min, tipo);
+  return min;
+}
 export function logSession(min, tipo = "rutina") {
   data.sesiones.push({ t: new Date().toISOString(), min: Math.max(1, Math.round(min)), tipo });
   save();

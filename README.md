@@ -10,7 +10,7 @@ App web para aprender guitarra por tu cuenta: abres, practicas de 15 a 45 minuto
 | **Practicar** | Reto de cambios entre dos acordes (contando tú, con clic o escuchando por micrófono) con entrenador de tempo automático, secuencias de acordes de canciones, entrenador de rasgueo, tabs y riffs nota por nota, notas en el mástil, metrónomo progresivo y Jam con batería y bajo para improvisar. Puedes grabarte en cualquier momento. |
 | **Afinador** | Afinador cromático por micrófono con detección automática de cuerda, en afinación estándar, medio tono abajo, un tono abajo, Drop D, Drop C#, Drop C, DADGAD, Open G, Open D o la de tu tab. |
 | **Acordes** | 50 acordes con digitación y sonido, y escalas en el diapasón en cualquier tono. |
-| **Progreso** | Minutos por día, rachas, camino de 5 niveles, repertorio de 144 canciones ordenado por categoría (pop y rock de los 80, rock suave de los 70, pop y rock de los 90, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords, tus grabaciones y respaldo de datos. |
+| **Progreso** | Minutos por día, rachas, camino de 8 niveles, 53 metas extra que se marcan solas, repertorio de 172 canciones ordenado por categoría (pop y rock de los 80, rock suave de los 70, pop y rock de los 90, rock en español, country y americana, hard rock y metal, rock clásico, alternativo, pop, folk, reggae y funk) y dificultad (fácil, intermedia, avanzada), con secuencias de acordes y rasgueo sugerido, récords, tus grabaciones y respaldo de datos. |
 
 La descripción completa del producto está en [PRODUCTO.md](PRODUCTO.md).
 
@@ -75,7 +75,7 @@ En **Practicar → Secuencias** armas la progresión de una canción (por ejempl
 - Escribe la secuencia de una vez: `G:2 C:2 D:4` cambia los tiempos y `A7 x4` repite.
 - **Canciones** (junto al selector) abre un buscador por género, dificultad y nombre, con las partes de cada canción y sus acordes.
 - Puedes ligarla a una canción del repertorio; aparece un botón para practicarla desde Progreso y desde la canción del día.
-- El tempo sube o baja solo con las mismas reglas del entrenador de cambios.
+- El tempo sube o baja solo con las mismas reglas del entrenador de cambios. Con − y + lo ajustas tú desde 20 BPM (de 2 en 2 por debajo de 40), para ir tan lento como necesites.
 - **Rasgueo en la secuencia:** elige un patrón (por defecto, el sugerido de la canción) y sus golpes ↓ ↑ ✕ aparecen dentro de cada acorde en el carril y, en grande, en la tarjeta principal, con la casilla que suena iluminada y el siguiente golpe marcado. Con *Sonido guía*, la app toca la canción con ese rasgueo.
 - Con la calificación por micrófono, la app revisa que cada acorde suene a tiempo y te muestra qué cambio de la secuencia te cuesta más, con un atajo para practicar ese par.
 
@@ -108,6 +108,26 @@ En **Practicar → Tabs** importas una tab y la aprendes nota por nota:
 - Incluye cuatro ejercicios: pentatónica de La menor, arpegios, un riff en Mi y ligados.
 
 Las tabs importadas se guardan **solo en tu dispositivo** (no están en este repositorio ni se suben a ningún lado) y viajan en el respaldo de Progreso.
+
+### Vista previa
+
+En la lista de tabs, el botón ▶ junto a cada una la abre y la toca **completa, desde el principio y a velocidad original**, con las demás pistas del archivo como acompañamiento. Otro toque (o *Detener*) la para. *Escuchar*, en cambio, toca solo la sección elegida y a tu velocidad de práctica.
+
+## Si paras antes de terminar
+
+Lo que llevas se guarda aunque detengas una práctica a medias:
+
+- **Cambios:** si el reto lleva 15 segundos o más, se califica con el tiempo real (los retos de menos de un minuto no cuentan para récords).
+- **Secuencias:** a partir de 15 segundos se guarda la ronda con los acordes que alcanzaste a tocar.
+- **Rasgueo:** desde el segundo compás se califica lo que tocaste.
+- **Tabs con tempo:** si ya calificó 8 notas o más, guarda la vuelta incompleta (sin cambiar la velocidad).
+- **Mástil:** con 3 notas encontradas y 20 segundos, se guarda tu ritmo en notas por minuto.
+- **Rutina de Hoy:** los minutos se guardan mientras avanzas, al pausar y al cerrar la app. Si vuelves el mismo día, la rutina sigue donde se quedó.
+- Los minutos de cualquier herramienta cuentan para tu racha desde medio minuto.
+
+## Metas
+
+El camino tiene 8 niveles (Fundamentos, Acordes abiertos, Rock y power chords, Pentatónica y solos, Cejilla, Repertorio, Tabs y riffs, Músico completo). Además, en **Progreso → Más metas** hay 53 metas por área (constancia, cambios, rasgueo, secuencias, tabs, mástil, Jam, repertorio, grabaciones y acordes propios) que no bloquean tu nivel y se marcan solas con tus datos, cada una con su barra de avance.
 
 ## Pantalla completa y más espacio
 

@@ -1,6 +1,6 @@
 // Secuencias de acordes: arma la progresión de una canción y practica los cambios en orden, con clic,
 // tempo automático y calificación por micrófono acorde por acorde.
-import { data, save, toast, esc, $ } from "../store.js";
+import { data, save, toast, esc, practiceStart, practiceEnd, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { classify, chordTemplate } from "../detect.js";
@@ -65,7 +65,8 @@ const list = () => data.secuencias || [];
 const cur = () => list().find(q => q.id === data.ajustes.secId) || list()[0];
 const distinct = q => [...new Set(q.acordes.map(a => a.c))];
 const changesIn = q => q.acordes.filter((a, i) => a.c !== q.acordes[(i - 1 + q.acordes.length) % q.acordes.length].c).length;
-const clampBpm = v => Math.max(40, Math.min(200, Math.round(v)));
+const clampBpm = v => Math.max(20, Math.min(200, Math.round(v)));
+const bpmStep = (v, d) => clampBpm(v + d * (v < 40 || (v === 40 && d < 0) ? 2 : 5));
 function nextBpm(bpm, ratio) {
   if (ratio >= .95) return clampBpm(bpm * 1.1);
   if (ratio >= .85) return clampBpm(bpm * 1.05);
@@ -88,7 +89,7 @@ export function mountSecuencias(container) {
       </div>
       <select id="sqPick" aria-label="Elegir secuencia"></select>
       <button class="btn small" id="sqBrowse" title="Buscar canción por género y dificultad"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Canciones</button>
-      <span id="sqManual" class="row" style="gap:6px" hidden><input type="number" id="sqBpm" min="40" max="200" aria-label="Tempo en BPM" style="width:80px"></span>
+      <span id="sqManual" class="stepper sqstep" title="Tempo. Desde 20 BPM para ir muy lento; en automático la app sigue desde aquí."><button class="icon-btn" id="sqBm" aria-label="Más lento">−</button><input type="number" id="sqBpm" min="20" max="200" aria-label="Tempo en BPM"><button class="icon-btn" id="sqBp" aria-label="Más rápido">+</button></span>
       <select id="sqStrum" aria-label="Rasgueo" style="flex:0 1 210px"></select>
       <span class="deck-tempo" id="sqTempoTop"></span><span id="sqTitle" hidden></span>
     </div>
@@ -139,7 +140,9 @@ export function mountSecuencias(container) {
   $("#sqBrowse", el).onclick = () => { if (!P.run && !LRN.run) openBrowser(); };
   $("#sqAuto", el).onchange = e => { const q = cur(); q.auto = e.target.checked; save(); renderTempo(); idle(); };
   $("#sqMic", el).onchange = e => { data.ajustes.secMic = e.target.checked; save(); renderStats(); };
-  $("#sqBpm", el).onchange = e => { const q = cur(); q.bpm = clampBpm(+e.target.value || q.bpm); e.target.value = q.bpm; save(); renderTempo(); idle(); };
+  $("#sqBpm", el).onchange = e => { if (P.run) return renderTempo(); const q = cur(); q.bpm = clampBpm(+e.target.value || q.bpm); e.target.value = q.bpm; save(); renderTempo(); idle(); };
+  const nudge = d => { if (P.run || LRN.run) return; const q = cur(); q.bpm = bpmStep(q.bpm, d); save(); renderTempo(); idle(); };
+  $("#sqBm", el).onclick = () => nudge(-1); $("#sqBp", el).onclick = () => nudge(1);
   $("#sqStart", el).onclick = toggle;
   el.querySelectorAll("[data-sqm]").forEach(b => b.onclick = () => { if (P.run || LRN.run) return; const q = cur(); q.modo = b.dataset.sqm; save(); render(); });
   $("#sqSkip", el).onclick = () => { if (LRN.run) learnAdvance(!LRN.mic); };
@@ -186,8 +189,8 @@ function strip(active) {
 }
 function renderTempo() {
   const q = cur(), auto = q.auto !== false;
-  $("#sqManual", el).hidden = auto; $("#sqBpm", el).value = q.bpm;
-  $("#sqTempoTop", el).innerHTML = auto ? `${q.bpm}<small>BPM</small>` : `<small>BPM</small>`;
+  $("#sqBpm", el).value = q.bpm;
+  $("#sqTempoTop", el).innerHTML = `<small>BPM${auto ? " · auto" : ""}</small>`;
 }
 function stageShow(name, next) {
   if ($("#sqNow", el).textContent !== (name || "—")) $("#sqDiag", el).innerHTML = name && CHORDS[name] ? diagram(name) : "";
@@ -332,7 +335,12 @@ function renderEditor() {
 /* ---------- Reproducción ---------- */
 async function toggle() {
   if (LRN.run || (!P.run && modeOf(cur()) === "aprender")) return learnToggle();
-  if (P.run) { stop(true); return; }
+  if (P.run) {
+    // Si ya llevabas un rato, la ronda se califica con lo que alcanzaste a tocar
+    const played = A.now() - P.t0;
+    if (played >= 15) finish(played); else stop(true);
+    return;
+  }
   const a = A.ctx(); if (!a) return;
   const q = cur(); if (distinct(q).length < 2) return;
   P.listen = $("#sqMic", el).checked;
@@ -369,11 +377,12 @@ async function toggle() {
   if (P.listen && q.rasgueo) { hw.tickOffset = data.ajustes.latenciaMic ?? .06; A.startOnsets(t => hw.tick(t, "hit")); }
   judge.setSegments(P.listen ? tl : []);
   hw.run(() => A.now());
-  P.run = true; $("#sqStage", el).classList.add("live"); $("#sqStart", el).textContent = "Detener";
+  P.run = true; practiceStart("secuencias"); $("#sqStage", el).classList.add("live"); $("#sqStart", el).textContent = "Detener";
   $("#sqPick", el).disabled = true;
   P.tick = setInterval(tick, 40); A.keepAwake(true); tick();
 }
 function stop(cancel) {
+  practiceEnd("secuencias");
   P.run = false; clearInterval(P.tick); A.keepAwake(false); hw.stop(); A.stopOnsets();
   $("#sqStart", el).textContent = "Empezar ronda"; $("#sqPick", el).disabled = false; $("#sqDur", el).disabled = false;
   if (cancel) { strip(-1); idle(); }
@@ -427,8 +436,15 @@ function tick() {
   $("#sqSub", el).textContent = `${P.bpm} BPM`;
   if (left <= 0) finish();
 }
-function finish() {
-  if (P.listen) judge.flush(P.t0 + P.dur);
+function finish(played = null) {
+  if (played != null) {
+    // ronda incompleta: solo cuentan los acordes que ya terminaron
+    const tEnd = P.t0 + played;
+    P.timeline = P.timeline.filter(s => s.t1 <= tEnd + .05); P.expected = P.timeline.filter(s => s.isChange).length;
+    if (P.listen) { judge.segs = judge.segs.filter(s => s.t1 <= tEnd + .05); judge.flush(tEnd); }
+    P.partial = played;
+  } else P.partial = null;
+  if (P.listen && played == null) judge.flush(P.t0 + P.dur);
   stop(false); A.chime();
   $("#sqStage", el).classList.remove("live"); $("#sqLab", el).textContent = "¡Tiempo!"; $("#sqBeats", el).innerHTML = ""; strip(-1);
   $("#sqSub", el).textContent = fb.best ? `Mejor racha: ${fb.best}` : "";
@@ -439,12 +455,13 @@ function finish() {
     rn.value = Math.min(ok, exp);
     rl.textContent = `El micrófono escuchó ${Math.min(ok, exp)} de ${exp} cambios limpios y a tiempo a ${P.bpm} BPM. Corrige el número si hace falta.`;
   } else { rn.value = exp; rl.textContent = `Hubo ${exp} cambios a ${P.bpm} BPM. ¿Cuántos salieron limpios y a tiempo?`; }
+  if (P.partial != null) rl.textContent = `Ronda detenida a los ${Math.floor(P.partial / 60)}:${String(Math.floor(P.partial % 60)).padStart(2, "0")}. ` + rl.textContent;
   $("#sqResult", el).hidden = false;
 }
 function saveRound() {
   const q = cur(), exp = Math.max(1, P.expected), n = Math.max(0, Math.round(+$("#sqResN", el).value || 0));
   const ratio = Math.min(1, n / exp), pct = Math.round(ratio * 100), t = new Date().toISOString();
-  q.hist = [...(q.hist || []), { t, bpm: P.bpm, ratio: Math.round(ratio * 100) / 100 }].slice(-60);
+  q.hist = [...(q.hist || []), { t, bpm: P.bpm, ratio: Math.round(ratio * 100) / 100, ...(P.partial != null ? { parcial: Math.round(P.partial) } : {}) }].slice(-60);
   if (P.listen) { q.fallos = q.fallos || {}; P.results.forEach(r => { const k = r.from + "→" + r.to, v = q.fallos[k] || [0, 0]; v[0] += r.ok ? 1 : 0; v[1]++; q.fallos[k] = v; }); }
   let msg = `Guardado: ${pct}% limpios.`;
   if (q.auto !== false) {
@@ -469,7 +486,7 @@ function applyMode(q) {
   el.querySelectorAll("[data-sqm]").forEach(b => b.setAttribute("aria-checked", (b.dataset.sqm === "aprender") === learn));
   $("#sqHwy", el).hidden = learn; $("#sqQueue", el).hidden = !learn; $("#sqStrip", el).hidden = learn; $("#sqLearnProg", el).hidden = !learn; $("#sqMatch", el).hidden = !learn;
   ["sqAuto", "sqMic"].forEach(id => $("#" + id, el).closest("label").hidden = learn);
-  $("#sqGuideRow", el).hidden = learn || !q.rasgueo; $("#sqDur", el).hidden = learn; $("#sqTempoTop", el).hidden = learn; $("#sqStrum", el).hidden = learn;
+  $("#sqGuideRow", el).hidden = learn || !q.rasgueo; $("#sqDur", el).hidden = learn; $("#sqTempoTop", el).hidden = learn; $("#sqManual", el).hidden = learn; $("#sqStrum", el).hidden = learn;
   if (learn) { $("#sqStrumGrid", el).hidden = true; $("#sqBeats", el).hidden = true; }
   if (!P.run && !LRN.run) $("#sqStart", el).textContent = learn ? "Empezar a aprender" : "Empezar ronda";
   if (learn && !LRN.run) learnIdle(q);
@@ -504,6 +521,7 @@ async function learnToggle() {
   if (!A.mic.an) { $("#sqLab", el).textContent = "Silencia las cuerdas"; $("#sqSub", el).textContent = "Midiendo el ruido del cuarto…"; }
   if (!(await A.micOn())) { LRN.mic = false; toast("Sin micrófono: pulsa Ya lo tengo (o Espacio) cuando suene bien cada acorde"); }
   window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-rasgueo")); window.dispatchEvent(new Event("riff:stop-cambios"));
+  practiceStart("aprender");
   Object.assign(LRN, { run: true, q, seq, names: distinct(q), idx: 0, tPrompt: performance.now(), hits: 0, times: [], first: true, offered: false, hinted: false, match: 0 });
   fb.reset(); $("#sqStage", el).classList.add("live"); $("#sqStart", el).textContent = "Detener"; $("#sqPick", el).disabled = true;
   $("#sqSkip", el).hidden = false; $("#sqSkip", el).textContent = LRN.mic ? "Saltar acorde" : "Ya lo tengo";
@@ -512,7 +530,7 @@ async function learnToggle() {
   LRN.iv = setInterval(learnTick, 50); A.keepAwake(true);
 }
 function learnStop() {
-  clearInterval(LRN.iv); LRN.run = false; A.keepAwake(false); clearInterval(LRN.goIv);
+  clearInterval(LRN.iv); LRN.run = false; A.keepAwake(false); clearInterval(LRN.goIv); practiceEnd("aprender", "secuencias");
   $("#sqGo", el).hidden = true; $("#sqSkip", el).hidden = true; $("#sqSkip", el).removeAttribute("data-primary"); $("#sqPick", el).disabled = false;
   $("#sqStage", el).classList.remove("live");
   const q = LRN.q, med = median(LRN.times.slice(-8));

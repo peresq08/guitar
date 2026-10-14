@@ -140,6 +140,11 @@ textarea{min-height:70px;resize:vertical}
 .meter .bar > div.win{background:var(--good)}
 .stepper{display:flex;gap:8px;justify-content:center;align-items:center}
 .stepper input{width:100px;text-align:center;font-family:var(--mono);font-size:1.6rem;font-weight:700}
+.sqstep{gap:4px;flex:0 0 auto}
+.sqstep input{width:64px;font-size:1.25rem;padding:6px 2px;-moz-appearance:textfield}
+.sqstep input::-webkit-inner-spin-button,.sqstep input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sqstep .icon-btn{width:36px;height:36px}
+.sqstep[hidden]{display:none}
 .beats{display:flex;gap:10px;justify-content:center}
 .beats i{width:18px;height:18px;border-radius:50%;background:var(--line);display:block}
 .beats i.on{background:var(--led)}
@@ -193,6 +198,13 @@ details summary{cursor:pointer;font-weight:600}
 .level-card summary::before{content:"▸";color:var(--muted);margin-right:-2px}
 .level-card[open] summary::before{content:"▾"}
 .level-card summary .chip{flex-shrink:0;margin-left:auto}
+#metasExtra{gap:8px}
+.xgoals summary>span:first-child{display:flex;flex-direction:column;gap:2px;min-width:0;font-weight:700}
+.xnext{font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xgoals.done{opacity:1}
+.xgoal .check{display:grid;place-items:center}
+.xbar{display:block;height:4px;border-radius:2px;background:var(--line);margin-top:5px;overflow:hidden}
+.xbar i{display:block;height:100%;background:var(--accent);border-radius:2px}
 .songrow select{max-width:140px}
 .lvlbar{position:relative;overflow:visible}
 .lvlbar > div{border-radius:99px}
@@ -619,6 +631,8 @@ select optgroup{font-weight:700;color:var(--muted)}
 .tbitem:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
 .tblist li.on .tbitem{border-color:var(--accent);background:var(--soft)}
 .tblist .icon-btn{height:auto;min-height:44px;width:44px;font-size:1rem}
+.tblist .tbprev{color:var(--accent)}
+.tblist .tbprev.on{background:var(--accent);color:var(--accent-ink,#111);border-color:var(--accent)}
 .icon-btn.danger{width:auto;padding:0 10px;font-size:.85rem;font-weight:700;color:var(--led);border-color:var(--led)}
 .tbdrop{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border:1.5px dashed var(--line);border-radius:12px}
 .tbdrop.over{border-color:var(--accent);background:var(--soft)}

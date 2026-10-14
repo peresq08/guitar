@@ -1,6 +1,6 @@
 // Reto de cambios entre dos acordes: cuenta tú, con clic (entrenador de tempo) o escuchando por micrófono.
 // Con micrófono, el carril muestra lo que viene y lo que tocaste, y cada cambio se califica al momento.
-import { data, save, bestFor, toast, esc, $ } from "../store.js";
+import { data, save, bestFor, toast, esc, practiceStart, practiceEnd, $ } from "../store.js";
 import { CHORDS, diagram } from "../chords.js";
 import * as A from "../audio.js";
 import { chordTemplate, LAB_MIN, LAB_DIFF } from "../detect.js";
@@ -315,13 +315,20 @@ function onJudge(s, status) {
 }
 /* ---- Reto ---- */
 function stop() {
+  practiceEnd("cambios");
   C.run = false; clearInterval(C.tick); A.keepAwake(false); hw.stop();
   $("#cStart", cel).textContent = "Empezar reto"; $("#cA", cel).disabled = $("#cB", cel).disabled = false; $("#cDur", cel).disabled = false;
   cel.querySelectorAll("[data-mode]").forEach(b => b.disabled = false);
 }
 async function startChallenge() {
   const a = A.ctx(); if (!a) return;
-  if (C.run) { stop(); D.det = null; idle(); return; }
+  if (C.run) {
+    // detenido antes de tiempo: si ya llevabas 15 s o más, se califica lo que alcanzaste a tocar
+    const played = A.now() - C.t0;
+    if (played >= 15) { C.partial = played; C.min = played / 60; C.dur = played; finish(); return; }
+    stop(); D.det = null; idle(); return;
+  }
+  C.partial = null;
   let listen = C.mode === "mic" || (C.mode === "guia" && $("#gMic", cel).checked);
   if (listen && !(await startMic())) {
     if (!micWarned) { toast("Sin micrófono: sigue sin calificación automática"); micWarned = true; }
@@ -332,7 +339,7 @@ async function startChallenge() {
   window.dispatchEvent(new Event("riff:stop-audio")); window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo"));
   C.starting = false;
   $("#cResult", cel).hidden = true;
-  C.run = true; C.t0 = a.currentTime + 3; C.listen = listen; C.min = mins(); C.dur = C.min * 60;
+  C.run = true; practiceStart("cambios"); C.t0 = a.currentTime + 3; C.listen = listen; C.min = mins(); C.dur = C.min * 60;
   $("#cDur", cel).disabled = true;
   C.autoTempo = C.mode === "guia" && $("#gAuto", cel).checked;
   Object.assign(C, C.mode === "guia" ? guiaTempo() : {});
@@ -405,17 +412,19 @@ function finish() {
       rn.value = clean; rl.textContent = `El micrófono escuchó ${clean} de ${C.auto} cambios limpios y a tiempo a ${C.bpm} BPM. Corrige el número si hace falta.`;
     } else { rn.value = C.auto; rl.textContent = `Hubo ${C.auto} cambios a ${C.bpm} BPM. ¿Cuántos salieron limpios?`; }
   } else { rn.value = (prev || 0) * C.min; rl.textContent = C.min > 1 ? `¿Cuántos cambios lograste en ${C.min} minutos?` : "¿Cuántos cambios lograste?"; }
+  if (C.partial != null) rl.textContent = `Reto detenido a los ${C.partial < 60 ? Math.round(C.partial) + " s" : fmt(C.partial)}${C.partial < 60 ? " (no cuenta para récord por ser menos de un minuto)" : ""}. ` + rl.textContent.replace(/en \d+ minutos/, "");
   $("#cResult", cel).hidden = false;
 }
 function saveResult() {
   // El récord se guarda por minuto para comparar rondas de distinta duración
   const total = Math.max(0, Math.round(+$("#resN", cel).value || 0)), n = Math.round(total / (C.min || 1)), k = pairKey(), prev = bestFor(k);
   const rec = { par: k, n, t: new Date().toISOString(), modo: C.mode };
-  if (C.min > 1) { rec.total = total; rec.min = C.min; }
+  if (C.min !== 1) { rec.total = total; rec.min = Math.round(C.min * 100) / 100; }
+  if (C.partial != null) rec.parcial = true;
   if (C.mode === "guia") rec.bpm = C.bpm;
   if (C.micRes) rec.limpios = C.micRes.clean;
   data.intentos.push(rec);
-  let msg = (C.min > 1 ? `${n} cambios por minuto. ` : "") + (n > prev ? (prev ? `¡Nuevo récord! Antes: ${prev}` : "Primer registro guardado") : `Guardado. Tu récord sigue en ${prev}`);
+  let msg = (C.min !== 1 ? `${n} cambios por minuto. ` : "") + (n > prev ? (prev ? `¡Nuevo récord! Antes: ${prev}` : "Primer registro guardado") : `Guardado. Tu récord sigue en ${prev}`);
   if (C.mode === "guia" && C.autoTempo && C.auto > 0) {
     const ratio = Math.min(1, total / C.auto), cpm = C.cpm, next = nextCpm(cpm, ratio), pct = Math.round(ratio * 100);
     data.entrenador = data.entrenador || {};

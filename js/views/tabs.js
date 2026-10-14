@@ -2,7 +2,7 @@
 // En modo Aprender la app muestra una nota (o acorde) a la vez y espera a escucharla por el micrófono antes de
 // pasar a la siguiente. "Escuchar" toca la sección con guitarra sintetizada a la velocidad que elijas.
 // Las tabs importadas se guardan solo en este dispositivo.
-import { data, save, tabs, saveTabs, toast, esc, logSession, $ } from "../store.js";
+import { data, save, tabs, saveTabs, toast, esc, practiceStart, practiceEnd, $ } from "../store.js";
 import * as A from "../audio.js";
 import { parseTextTab, stdTuning } from "../tabs/texto.js";
 import { loadAlphaTab, readScore, listTracks, guessTrack, trackToTab, tuningLabel, tracksForBacking, fixTabTexts, fixText } from "../tabs/gp.js";
@@ -175,7 +175,7 @@ export function mountTabs(container) {
   el.querySelectorAll("[data-tbm]").forEach(b => b.onclick = () => { if (L.run || T.run) return; if (PL.run) stopListen(); prog(curTab()).modo = b.dataset.tbm; save(); applyMode(); });
   $("#tbGuide", el).onchange = e => { data.ajustes.tabGuide = e.target.checked; save(); };
   $("#tbListen", el).onclick = () => PL.run ? stopListen() : listen();
-  $("#tbStart", el).onclick = () => L.run ? learnStop() : T.run ? tempoStop() : modeOf(curTab()) === "tempo" ? tempoStart() : learnStart();
+  $("#tbStart", el).onclick = () => L.run ? learnStop() : T.run ? tempoStopManual() : modeOf(curTab()) === "tempo" ? tempoStart() : learnStart();
   $("#tbSkip", el).onclick = () => { if (L.run) advance(!L.mic); };
   $("#tbNow", el).onclick = () => { const t = curTab(); if (t && !T.run) playEvent(t, t.ev[cursor()], A.ctx() && A.now() + .02); };
   $("#tbCal", el).onclick = openSettings;
@@ -205,6 +205,19 @@ export function showTab(id, opts = {}) {
   if (opts.tabPista != null && t.pistas && t.pistaIdx !== opts.tabPista) switchTrack(t, opts.tabPista).then(apply); else apply();
 }
 export function stopTabs() { stopAll(); }
+// Vista previa desde la lista: abre la tab (si hace falta) y la toca completa; otro toque la detiene
+function previewTab(id) {
+  if (PL.run && PL.preview && data.ajustes.tabId === id) { stopListen(); return; }
+  if (data.ajustes.tabId !== id) showTab(id); else stopAll();
+  listen(true);
+}
+function paintPreview() {
+  el?.querySelectorAll("[data-prev]").forEach(b => {
+    const on = PL.run && PL.preview && b.dataset.prev === data.ajustes.tabId;
+    b.textContent = on ? "■" : "▶"; b.classList.toggle("on", on);
+    b.setAttribute("aria-label", (on ? "Detener la vista previa de " : "Vista previa de ") + b.closest("li").querySelector("b").textContent);
+  });
+}
 function stopAll() { if (L.run) learnStop(); if (T.run) tempoStop(); if (PL.run) stopListen(); }
 
 /* ---------- Pintar ---------- */
@@ -270,7 +283,7 @@ function tuningName(t) {
   return { short: tuningLabel(t.afin), long: tuningLabel(t.afin) };
 }
 function show() {
-  const t = curTab(), i = cursor(), e = t.ev[i], nx = t.ev[i + 1], r = range(t);
+  const t = curTab(), i = cursor(), e = t.ev[i], nx = t.ev[i + 1], r = PL.run && PL.preview ? PL.r : range(t);
   if (!e) return;
   const playable = e.n.filter(n => !n[3].includes("x"));
   const now = $("#tbNow", el), where = $("#tbWhere", el);
@@ -313,13 +326,15 @@ function renderLib() {
   const box = $("#tbLib", el), t = curTab();
   const row = x => {
     const notas = x.notas ?? x.ev.reduce((a, e) => a + e.n.length, 0);
-    return `<li class="${x.id === t.id ? "on" : ""}"><button class="tbitem" data-open="${esc(x.id)}"><b>${esc(x.titulo)}</b><small>${esc([x.artista, x.fuente === "gp" ? x.pista : null, `${x.compases.length} compases`, `${notas} notas`].filter(Boolean).join(" · "))}</small></button>${x.ejercicio ? "" : `<button class="icon-btn" data-del="${esc(x.id)}" aria-label="Borrar ${esc(x.titulo)}" title="Borrar">✕</button>`}</li>`;
+    return `<li class="${x.id === t.id ? "on" : ""}"><button class="tbitem" data-open="${esc(x.id)}"><b>${esc(x.titulo)}</b><small>${esc([x.artista, x.fuente === "gp" ? x.pista : null, `${x.compases.length} compases`, `${notas} notas`].filter(Boolean).join(" · "))}</small></button><button class="icon-btn tbprev" data-prev="${esc(x.id)}" aria-label="Vista previa de ${esc(x.titulo)}" title="Vista previa: escúchala completa a velocidad original">▶</button>${x.ejercicio ? "" : `<button class="icon-btn" data-del="${esc(x.id)}" aria-label="Borrar ${esc(x.titulo)}" title="Borrar">✕</button>`}</li>`;
   };
   box.innerHTML = `<h3>Tus tabs</h3>
     ${tabs.length ? `<ul class="tblist">${tabs.map(row).join("")}</ul>` : `<p class="note">Todavía no importas ninguna. Mientras, practica con los ejercicios de abajo.</p>`}
     <div class="label" style="margin-top:6px">Ejercicios</div>
     <ul class="tblist">${builtinTabs().map(row).join("")}</ul>`;
   box.querySelectorAll("[data-open]").forEach(b => b.onclick = () => showTab(b.dataset.open));
+  box.querySelectorAll("[data-prev]").forEach(b => b.onclick = () => previewTab(b.dataset.prev));
+  paintPreview();
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "¿Borrar?"; b.classList.add("danger"); setTimeout(() => { if (b.isConnected) { b.dataset.sure = ""; b.textContent = "✕"; b.classList.remove("danger"); } }, 3000); return; }
     stopAll();
@@ -449,13 +464,12 @@ async function learnStart() {
   $("#tbLab", el).textContent = L.mic ? "Toca esta nota" : "Toca y pulsa Ya la toqué";
   $("#tbListen", el).disabled = true;
   staff.setCursor(L.idx); show(); learnProg();
-  L.iv = setInterval(learnTick, 40); A.keepAwake(true);
+  L.iv = setInterval(learnTick, 40); A.keepAwake(true); practiceStart("tabs");
 }
 function learnStop() {
   clearInterval(L.iv); L.run = false; A.stopOnsets(); A.keepAwake(false);
   const t = curTab(); L.view = L.idx; if (t) prog(t).pos = L.idx;
-  const min = (performance.now() - L.startedAt) / 60000;
-  if (min >= .5) logSession(Math.round(min * 10) / 10, "tabs"); else save();
+  practiceEnd("tabs"); save();
   $("#tbStage", el).classList.remove("live");
   $("#tbStart", el).textContent = "Empezar"; $("#tbStart", el).setAttribute("data-primary", "");
   const sk = $("#tbSkip", el); sk.hidden = true; sk.removeAttribute("data-primary");
@@ -545,7 +559,7 @@ function sectionDone(t, r) {
 }
 
 /* ---------- Escuchar (tu pista y, si quieres, el acompañamiento) ---------- */
-const PL = { run: false, iv: null, j: 0, t0: 0, q: [], tl: null, r: null, bk: [], bi: 0 };
+const PL = { run: false, iv: null, j: 0, t0: 0, q: [], tl: null, r: null, bk: [], bi: 0, speed: 1, preview: false };
 function secPerTick(t, e, speed) {
   let bpm = t.tempo || 80;
   for (let k = 0; k <= e.c; k++) if (t.compases[k]?.bpm) bpm = t.compases[k].bpm;
@@ -553,17 +567,22 @@ function secPerTick(t, e, speed) {
 }
 function playEvent(t, e, when) {
   if (!e || !A.ctx()) return;
-  const dur = Math.min(2.2, Math.max(.35, e.d * secPerTick(t, e, velOf(t)) + .25));
+  const dur = Math.min(2.2, Math.max(.35, e.d * secPerTick(t, e, PL.run ? PL.speed : velOf(t)) + .25));
   e.n.forEach((n, k) => { if (n[3].includes("x")) A.chuck(when + k * .012, .3); else A.pluck(target(t, n), when + k * .018, .32, dur); });
 }
-function listen() {
+// preview: toda la canción desde el principio, a la velocidad original y con el acompañamiento, sin repetir
+function listen(preview = false) {
   const t = curTab(); if (!t || !A.ctx()) return;
   window.dispatchEvent(new Event("riff:stop-seq")); window.dispatchEvent(new Event("riff:stop-rasgueo")); window.dispatchEvent(new Event("riff:stop-cambios"));
-  const r = range(t), tl = timeline(t, r, velOf(t));
-  const j0 = (L.view >= r.from && L.view <= r.to ? L.view : r.from) - r.from, off = tl.times[j0];
-  Object.assign(PL, { run: true, r, tl, j: j0, t0: A.now() + .15 - off, q: [], bk: backingList(t, tl, off - .01), bi: 0 });
+  const speed = preview ? 1 : velOf(t);
+  const r = preview ? { from: 0, to: t.ev.length - 1 } : range(t), tl = timeline(t, r, speed);
+  if (preview) { staff.set(t, r.from, r.to); staff.setCursor(0, true); L.view = 0; }
+  const j0 = preview ? 0 : (L.view >= r.from && L.view <= r.to ? L.view : r.from) - r.from, off = tl.times[j0];
+  Object.assign(PL, { run: true, speed, preview, r, tl, j: j0, t0: A.now() + .15 - off, q: [], bk: [], bi: 0 });
+  PL.bk = backingList(t, tl, off - .01);
   $("#tbListen", el).textContent = "Detener"; $("#tbStart", el).disabled = true;
-  $("#tbLab", el).textContent = "Escuchando";
+  $("#tbLab", el).textContent = preview ? `Vista previa · ${Math.floor(tl.end / 60)}:${String(Math.floor(tl.end % 60)).padStart(2, "0")} a velocidad original` : "Escuchando";
+  paintPreview();
   const step = () => {
     if (!PL.run) return;
     const now = A.now(), horizon = now + .2, n = PL.r.to - PL.r.from + 1;
@@ -573,7 +592,7 @@ function listen() {
     }
     while (PL.bi < PL.bk.length && PL.t0 + PL.bk[PL.bi].s < horizon) { playBacking(PL.bk[PL.bi], PL.t0 + PL.bk[PL.bi].s, t); PL.bi++; }
     if (PL.j >= n && PL.bi >= PL.bk.length && now > PL.t0 + PL.tl.end) {
-      if (!data.ajustes.tabLoop) { stopListen(); return; }
+      if (!data.ajustes.tabLoop || PL.preview) { stopListen(); return; }
       PL.t0 += PL.tl.end + .5; PL.j = 0; PL.bk = backingList(t, PL.tl, 0); PL.bi = 0;
     }
     while (PL.q.length && PL.q[0].at <= now) { const v = PL.q.shift(); L.view = v.i; if (!smoothMove()) staff.setCursor(v.i); show(); }
@@ -596,9 +615,10 @@ function listen() {
 }
 function stopListen() {
   clearInterval(PL.iv); cancelAnimationFrame(PL.raf); PL.run = false; PL.q = [];
-  if (staff.playX != null) { staff.endPlay(); staff.setCursor(L.view, true); }
   $("#tbListen", el).textContent = "Escuchar"; $("#tbStart", el).disabled = false;
   if (!L.run) $("#tbLab", el).textContent = "Listo";
+  if (PL.preview) { PL.preview = false; if (staff.playX != null) staff.endPlay(); paintPreview(); render(); return; }
+  if (staff.playX != null) { staff.endPlay(); staff.setCursor(L.view, true); }
 }
 
 /* ---------- Acompañamiento: las demás pistas del archivo de Guitar Pro ---------- */
@@ -767,7 +787,7 @@ async function tempoStart() {
   T.mic = data.ajustes.tabMic !== false;
   if (T.mic && !(await A.micOn())) { T.mic = false; toast(A.mic.error || "Sin micrófono: la tab avanza al tempo pero no se califica"); }
   if (T.mic && (data.ajustes.tabGuide || t.acomp?.some(x => mixOn(t, x)))) warnGuideEcho();
-  T.run = true; T.pass = 0; T.startedAt = performance.now(); T.lat = data.ajustes.latenciaMic ?? .05;
+  T.run = true; practiceStart("tabs"); T.pass = 0; T.startedAt = performance.now(); T.lat = data.ajustes.latenciaMic ?? .05;
   if (T.mic) A.startOnsets(o => onsetIn(o));
   $("#tbStage", el).classList.add("live"); $("#tbStart", el).textContent = "Detener";
   el.querySelectorAll(".tbvel button").forEach(b => b.disabled = true);
@@ -776,7 +796,14 @@ async function tempoStart() {
   const loop = () => { if (!T.run) return; frameDraw(); T.raf = requestAnimationFrame(loop); };
   T.raf = requestAnimationFrame(loop);
 }
+// Detenido a media vuelta: si ya se calificaron varias notas, se guarda esa parte
+function tempoStopManual() {
+  const judged = T.ev.filter(x => x.done);
+  if (T.mic && judged.length >= 8) { clearInterval(T.iv); T.ev = judged; T.partial = true; passDone(); return; }
+  tempoStop();
+}
 function startPass() {
+  T.partial = false; T.totalEv = 0;
   const t = curTab(), r = range(t), sp = velOf(t);
   const tl = timeline(t, r, sp);
   T.speed = sp; T.r = r; T.k = -1;
@@ -789,6 +816,7 @@ function startPass() {
     const tg = e.n.filter(n => !n[3].includes("x")).map(n => target(t, n));
     return { i, at: T.t0 + x, W, dur: Math.min(gn, 1.5), tg, legato: e.n.every(n => /[HS]/.test(n[3])), onset: null, good: 0, bad: 0, done: false };
   });
+  T.totalEv = T.ev.length;
   const all = T.ev.flatMap(x => x.tg);
   T.minF = all.length ? Math.max(38, 440 * Math.pow(2, (Math.min(...all) - 13 - 69) / 12)) : 70;
   T.maxF = all.length ? Math.min(2000, 440 * Math.pow(2, (Math.max(...all) + 2 - 69) / 12)) : 1400;
@@ -879,7 +907,8 @@ function passDone() {
   const c = { ok: 0, meh: 0, wrong: 0, miss: 0 }; T.ev.forEach(x => c[x.st]++);
   const pct = n ? (c.ok + c.meh * .5) / n : 0;
   const v0 = T.speed; let v1 = v0, note = "";
-  if (data.ajustes.tabAuto !== false) {
+  if (T.partial) note = "Vuelta incompleta: la velocidad no cambia.";
+  else if (data.ajustes.tabAuto !== false) {
     if (pct >= .9 && v0 < 1) { v1 = Math.min(1, v0 + .05); note = `Sube a ${Math.round(v1 * 100)}%.`; }
     else if (pct < .7 && v0 > .3) { v1 = Math.max(.3, v0 - .05); note = `Baja a ${Math.round(v1 * 100)}% para afianzarla.`; }
     else note = pct >= .9 ? "¡Ya la tocas a velocidad original!" : "Se queda la velocidad.";
@@ -887,14 +916,15 @@ function passDone() {
   p.tempo = p.tempo || {};
   const rec = p.tempo[r.key];
   // mejor vuelta: la más rápida con 90% o más; si aún no hay una así, la de mayor porcentaje
-  const better = !rec || (pct >= .9 ? (rec.pct < .9 || v0 > rec.vel) : (rec.pct < .9 && pct > rec.pct));
-  p.tempo[r.key] = { pct: better ? pct : rec.pct, vel: better ? v0 : rec.vel, pasadas: (rec?.pasadas || 0) + 1, t: Date.now() };
+  const enough = !T.partial || n >= T.totalEv * .5;   // una vuelta a medias cuenta para récord si llegaste a la mitad
+  const better = enough && (!rec || (pct >= .9 ? (rec.pct < .9 || v0 > rec.vel) : (rec.pct < .9 && pct > rec.pct)));
+  if (better || rec) p.tempo[r.key] = { pct: better ? pct : rec.pct, vel: better ? v0 : rec.vel, pasadas: (rec?.pasadas || 0) + (enough ? 1 : 0), t: Date.now() };
   if (v1 !== v0) setVel(t, v1); else save();
   paintVel();
   // compás con más errores
   const byBar = {}; T.ev.forEach(x => { if (x.st === "wrong" || x.st === "miss") { const bar = t.ev[x.i].c; byBar[bar] = (byBar[bar] || 0) + 1; } });
   const worst = Object.entries(byBar).sort((a, b) => b[1] - a[1])[0];
-  const parts = [`<b>${Math.round(pct * 100)}%</b> bien a ${Math.round(v0 * 100)}% de velocidad`, `${c.ok} a tiempo`];
+  const parts = [`${T.partial ? "Hasta donde llegaste: " : ""}<b>${Math.round(pct * 100)}%</b> bien a ${Math.round(v0 * 100)}% de velocidad`, `${c.ok} a tiempo`];
   if (c.meh) parts.push(`${c.meh} tarde, temprano o sin ataque claro`); if (c.wrong) parts.push(`${c.wrong} ${c.wrong === 1 ? "equivocada" : "equivocadas"}`); if (c.miss) parts.push(`${c.miss} sin tocar`);
   const msg = parts.join(" · ") + (note ? ". " + note : "");
   if (worst && worst[1] >= 2) p.dificil = { a: +worst[0], b: +worst[0], titulo: t.titulo, t: Date.now(), por: "tempo", pct: Math.round(pct * 100) };
@@ -905,13 +935,12 @@ function passDone() {
   const fix = $("#tbFix", el);
   if (fix) fix.onclick = () => { stopAll(); const bar = +fix.dataset.bar; p.sel = { a: bar, b: bar, custom: true }; p.pos = null; p.modo = "aprender"; save(); render(); };
   toast(`${Math.round(pct * 100)}% bien${note ? " · " + note : ""}`);
-  if (data.ajustes.tabLoop && T.run) { T.pass++; setTimeout(() => { if (T.run) startPass(); }, 1500); }
+  if (data.ajustes.tabLoop && T.run && !T.partial) { T.pass++; setTimeout(() => { if (T.run) startPass(); }, 1500); }
   else tempoStop(true);
 }
 function tempoStop(keepMsg) {
   clearInterval(T.iv); cancelAnimationFrame(T.raf); T.run = false; A.stopOnsets(); A.keepAwake(false);
-  const min = (performance.now() - T.startedAt) / 60000;
-  if (min >= .5) logSession(Math.round(min * 10) / 10, "tabs"); else save();
+  practiceEnd("tabs"); save();
   staff.endPlay();
   $("#tbStage", el).classList.remove("live"); $("#tbStart", el).textContent = "Empezar";
   el.querySelectorAll(".tbvel button").forEach(b => b.disabled = false);
