@@ -304,8 +304,9 @@ export function weakSpots() {
   // Tabs
   const tb = Object.entries(data.tabsProg || {}).filter(([, p]) => p.dificil && recent(p.dificil.t)).sort((a, b) => b[1].dificil.t - a[1].dificil.t)[0];
   if (tb) {
-    const [id, p] = tb, d = p.dificil, exists = id.startsWith("ej-") || tabs.some(t => t.id === id);
-    if (exists) out.push({ n: "Compás difícil", w: 4, weak: true, tip: `${d.titulo || "Tu tab"}: el compás ${d.a + 1} es donde más ${d.por === "tempo" ? "fallas con tempo" : "te tardas"}. Apréndelo nota por nota y luego vuelve a tocar la sección completa.`, tool: "tabs", tabId: id, tabSel: { a: d.a, b: d.b }, tabMode: "aprender" });
+    const [key, p] = tb, d = p.dificil, [id, pi] = key.split("#"), tab = tabs.find(t => t.id === id), exists = id.startsWith("ej-") || !!tab;
+    const pista = pi != null && tab?.pistas ? tab.pistas.find(x => x.i === +pi)?.nombre : null;
+    if (exists) out.push({ n: "Compás difícil", w: 4, weak: true, tip: `${d.titulo || "Tu tab"}${pista ? ` (${pista})` : ""}: el compás ${d.a + 1} es donde más ${d.por === "tempo" ? "fallas con tempo" : "te tardas"}. Apréndelo nota por nota y luego vuelve a tocar la sección completa.`, tool: "tabs", tabId: id, tabPista: pi != null ? +pi : null, tabSel: { a: d.a, b: d.b }, tabMode: "aprender" });
   }
   // Rasgueo
   const rp = Object.entries(data.rasgueos?.prog || {}).map(([id, g]) => ({ id, g, last: (g.hist || [])[(g.hist || []).length - 1] }))

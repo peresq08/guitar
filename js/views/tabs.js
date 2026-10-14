@@ -8,6 +8,7 @@ import { parseTextTab, stdTuning } from "../tabs/texto.js";
 import { loadAlphaTab, readScore, listTracks, guessTrack, trackToTab, tuningLabel, tracksForBacking, fixTabTexts, fixText } from "../tabs/gp.js";
 import { TabStaff, fretMini, noteName, pcName, stringName, renderFullTab } from "../ui/tabstaff.js";
 import { findShapes, shapeHint } from "../tabs/formas.js";
+import { savePistas, loadPista, deletePistas } from "../tabs/pistas.js";
 import { Feedback, swapText } from "../ui/highway.js";
 import { openMicSettings, sheet, close as closeSheet, warnGuideEcho } from "../ui/calib.js";
 
@@ -67,13 +68,16 @@ function builtinTabs() {
 }
 const allTabs = () => [...tabs, ...builtinTabs()];
 const curTab = () => allTabs().find(t => t.id === data.ajustes.tabId) || allTabs()[0];
-const prog = t => { data.tabsProg = data.tabsProg || {}; return (data.tabsProg[t.id] = data.tabsProg[t.id] || {}); };
+// Progreso por pista: la pista con la que importaste usa el id de la tab; las demás, "id#pista"
+const progKey = t => t.pistaIdx != null && t.pistaIdx !== t.pistaOrig ? `${t.id}#${t.pistaIdx}` : t.id;
+const prog = t => { data.tabsProg = data.tabsProg || {}; const k = progKey(t); return (data.tabsProg[k] = data.tabsProg[k] || {}); };
+const progBase = t => { data.tabsProg = data.tabsProg || {}; return (data.tabsProg[t.id] = data.tabsProg[t.id] || {}); };
 const isStd = t => stdTuning(t.cuerdas).every((m, k) => m === t.afin[k]);
 const velOf = t => { const p = prog(t), k = range(t).key; return p.vel?.[k] ?? .6; };
 function setVel(t, v) { const p = prog(t); p.vel = p.vel || {}; p.vel[range(t).key] = Math.round(Math.max(.3, Math.min(1.2, v)) * 100) / 100; save(); }
 const shapeCache = new Map();
 function shapesOf(t) {
-  const k = t.id + ":" + t.ev.length;
+  const k = t.id + ":" + (t.pistaIdx ?? "") + ":" + t.ev.length;
   if (!shapeCache.has(k)) { let f = []; try { f = findShapes(t); } catch (e) {} shapeCache.set(k, f); }
   return shapeCache.get(k);
 }
@@ -191,10 +195,14 @@ export function mountTabs(container) {
 export function showTab(id, opts = {}) {
   if (!allTabs().some(t => t.id === id)) return;
   stopAll(); data.ajustes.tabId = id;
-  const t = curTab(), p = prog(t);
-  if (opts.tabSel) { p.sel = { a: opts.tabSel.a, b: opts.tabSel.b, custom: true }; p.pos = null; }
-  if (opts.tabMode) p.modo = opts.tabMode;
-  save(); render();
+  const t = curTab();
+  const apply = () => {
+    const p = prog(t);
+    if (opts.tabSel) { p.sel = { a: opts.tabSel.a, b: opts.tabSel.b, custom: true }; p.pos = null; }
+    if (opts.tabMode) p.modo = opts.tabMode;
+    save(); render();
+  };
+  if (opts.tabPista != null && t.pistas && t.pistaIdx !== opts.tabPista) switchTrack(t, opts.tabPista).then(apply); else apply();
 }
 export function stopTabs() { stopAll(); }
 function stopAll() { if (L.run) learnStop(); if (T.run) tempoStop(); if (PL.run) stopListen(); }
@@ -315,8 +323,9 @@ function renderLib() {
   box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "¿Borrar?"; b.classList.add("danger"); setTimeout(() => { if (b.isConnected) { b.dataset.sure = ""; b.textContent = "✕"; b.classList.remove("danger"); } }, 3000); return; }
     stopAll();
-    const k = tabs.findIndex(x => x.id === b.dataset.del); if (k >= 0) tabs.splice(k, 1);
-    saveTabs(); if (data.tabsProg) delete data.tabsProg[b.dataset.del];
+    const k = tabs.findIndex(x => x.id === b.dataset.del), gone = k >= 0 ? tabs[k] : null; if (k >= 0) tabs.splice(k, 1);
+    if (gone?.pistas) deletePistas(gone.id, gone.pistas.map(x => x.i)).catch(() => {});
+    saveTabs(); if (data.tabsProg) for (const key of Object.keys(data.tabsProg)) if (key === b.dataset.del || key.startsWith(b.dataset.del + "#")) delete data.tabsProg[key];
     if (data.ajustes.tabId === b.dataset.del) data.ajustes.tabId = null;
     save(); render(); toast("Tab borrada");
   });
@@ -390,10 +399,16 @@ function finishImport(score, i, name) {
   if (!t.titulo) t.titulo = name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ");
   t.archivo = name;
   if (!t.ev.length) { toast("Esa pista no tiene notas."); return; }
-  // las demás pistas, para el acompañamiento (la tuya se toca con el sonido guía)
-  t.acomp = tracksForBacking(score).filter(x => x.i !== i);
+  // todas las pistas: para el acompañamiento y para cambiar la que aprendes
+  t.acomp = tracksForBacking(score);
+  const all = listTracks(score);
+  t.pistas = all.map(x => ({ i: x.i, nombre: x.nombre, cuerdas: x.cuerdas, afinacion: x.afinacion, notas: x.notas }));
+  t.pistaIdx = i; t.pistaOrig = i;
   fixTabTexts(t);
-  if (addTab(t)) toast(`Importada: ${t.titulo} · ${t.pista}${isStd(t) ? "" : ` · está en ${tuningName(t).long}: si tu guitarra está en estándar, cámbialo en Ajustes`}`);
+  const models = all.map(x => { const m = x.i === i ? t : trackToTab(score, x.i); return { i: x.i, pista: m.pista, afin: m.afin, cuerdas: m.cuerdas, capo: m.capo, ev: m.ev, notas: m.notas }; });
+  models.forEach(m => { m.pista = fixText(m.pista); });
+  if (addTab(t)) savePistas(t.id, models).catch(() => {});
+  if (tabs[0] === t) toast(`Importada: ${t.titulo} · ${t.pista}${isStd(t) ? "" : ` · está en ${tuningName(t).long}: si tu guitarra está en estándar, cámbialo en Ajustes`}`);
 }
 function pickTrack(score, tracks, name) {
   const g = guessTrack(tracks);
@@ -588,12 +603,14 @@ function stopListen() {
 
 /* ---------- Acompañamiento: las demás pistas del archivo de Guitar Pro ---------- */
 const TIPO = { guitarra: "Guitarra", bajo: "Bajo", bateria: "Batería", voz: "Voz (melodía)", teclado: "Teclado" };
-const mixOn = (t, x) => { const m = prog(t).mix || {}; return m[x.i] ?? (x.tipo !== "voz"); };
-const mixVol = t => prog(t).mixVol ?? .8;
+const mixOn = (t, x) => { const m = progBase(t).mix || {}; return m[x.i] ?? (x.tipo !== "voz"); };
+const mixVol = t => progBase(t).mixVol ?? .8;
+// Pistas de acompañamiento: todas menos la que estás aprendiendo
+const backing = t => (t.acomp || []).filter(x => x.i !== (t.pistaIdx ?? -1));
 function backingList(t, tl, fromSec) {
-  if (!t.acomp?.length) return [];
+  if (!backing(t).length) return [];
   const out = [];
-  for (const x of t.acomp) {
+  for (const x of backing(t)) {
     if (!mixOn(t, x)) continue;
     for (const [tick, d, ms] of x.ev) {
       if (tick < tl.startTick || tick >= tl.endTick) continue;
@@ -621,20 +638,39 @@ function drum(m, t, v) {
   else if (m >= 41 && m <= 50) A.kick(t, .5 * v);
 }
 function paintMix() {
-  const t = curTab(), b = $("#tbMix", el);
-  b.hidden = !t.acomp?.length;
-  if (t.acomp?.length) b.textContent = `Pistas ${t.acomp.filter(x => mixOn(t, x)).length}/${t.acomp.length}`;
+  const t = curTab(), b = $("#tbMix", el), bk = backing(t);
+  b.hidden = !bk.length && !(t.pistas?.length > 1);
+  b.textContent = t.pistas?.length > 1 ? `Pistas · ${t.pista}` : `Pistas ${bk.filter(x => mixOn(t, x)).length}/${bk.length}`;
+}
+async function switchTrack(t, i) {
+  if (t.pistaIdx === i) return true;
+  const m = await loadPista(t.id, i).catch(() => null);
+  if (!m) { toast("No encontré esa pista en este dispositivo. Vuelve a importar el archivo."); return false; }
+  stopAll();
+  Object.assign(t, { ev: m.ev, afin: m.afin, cuerdas: m.cuerdas, capo: m.capo, pista: m.pista, notas: m.notas, pistaIdx: i });
+  saveTabs(); save(); render();
+  return true;
 }
 function openMixer() {
-  const t = curTab(); if (!t.acomp?.length) return;
-  const { body } = sheet("Acompañamiento", () => paintMix());
-  body.innerHTML = `<p class="sheet-lead">Elige qué pistas suenan contigo al escuchar y al tocar con tempo. Tu pista (<b>${esc(t.pista)}</b>) suena con <i>Escuchar</i> o con el <i>Sonido guía</i>.</p>
-    <ul class="cal-list">${t.acomp.map(x => `<li><label class="switch" style="width:100%"><input type="checkbox" data-mix="${x.i}" ${mixOn(t, x) ? "checked" : ""}> <span><b>${esc(x.nombre)}</b> <small class="note">· ${TIPO[x.tipo] || x.tipo}</small></span></label></li>`).join("")}</ul>
+  const t = curTab(), bk = backing(t); if (!bk.length && !(t.pistas?.length > 1)) return;
+  const { body } = sheet("Pistas", () => paintMix());
+  const learn = t.pistas?.length > 1 ? `<div class="label">Pista que aprendes</div>
+    <ul class="cal-list tbtracks">${t.pistas.map(x => `<li><label><input type="radio" name="tbLearn" value="${x.i}" ${x.i === t.pistaIdx ? "checked" : ""}>
+      <span><b>${esc(x.nombre)}</b><small>${x.cuerdas} cuerdas · ${esc(x.afinacion)} · ${x.notas} notas</small></span></label></li>`).join("")}</ul>
+    <p class="note">Tu avance (secciones, récords y compases difíciles) se guarda por separado para cada pista.</p>` : "";
+  body.innerHTML = `${learn}
+    ${bk.length ? `<div class="label">Acompañamiento</div><p class="sheet-lead">Elige qué pistas suenan contigo al escuchar y al tocar con tempo. Tu pista (<b>${esc(t.pista)}</b>) suena con <i>Escuchar</i> o con el <i>Sonido guía</i>.</p>
+    <ul class="cal-list" id="tbMixList">${bk.map(x => `<li><label class="switch" style="width:100%"><input type="checkbox" data-mix="${x.i}" ${mixOn(t, x) ? "checked" : ""}> <span><b>${esc(x.nombre)}</b> <small class="note">· ${TIPO[x.tipo] || x.tipo}</small></span></label></li>`).join("")}</ul>
     <label class="ms-meter">Volumen <input type="range" id="tbMixVol" min="0.1" max="1.5" step="0.05" value="${mixVol(t)}" style="accent-color:var(--amber-2)"></label>
-    <p class="note">Si calificas con el micrófono, usa audífonos: así el micrófono no confunde el acompañamiento con tu guitarra.</p>
+    <p class="note">Si calificas con el micrófono, usa audífonos: así el micrófono no confunde el acompañamiento con tu guitarra.</p>` : ""}
+    ${t.fuente === "gp" && !t.pistas ? `<p class="note">Esta tab se importó antes de poder cambiar de pista. Para elegir otra guitarra, vuelve a importar el archivo.</p>` : ""}
     <div class="row sheet-foot"><button class="btn primary" data-close>Listo</button></div>`;
-  body.querySelectorAll("[data-mix]").forEach(c => c.onchange = () => { const p = prog(t); p.mix = p.mix || {}; p.mix[c.dataset.mix] = c.checked; save(); });
-  $("#tbMixVol", body).oninput = e => { prog(t).mixVol = +e.target.value; save(); };
+  body.querySelectorAll("[data-mix]").forEach(c => c.onchange = () => { const p = progBase(t); p.mix = p.mix || {}; p.mix[c.dataset.mix] = c.checked; save(); });
+  $("#tbMixVol", body)?.addEventListener("input", e => { progBase(t).mixVol = +e.target.value; save(); });
+  body.querySelectorAll("input[name=tbLearn]").forEach(r => r.onchange = async () => {
+    const ok = await switchTrack(t, +r.value);
+    if (ok) { closeSheet(); toast(`Ahora aprendes: ${t.pista}`); }
+  });
 }
 
 /* ---------- Afinación y micrófono ---------- */

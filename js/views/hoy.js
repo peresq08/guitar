@@ -105,7 +105,7 @@ function bind() {
   const b = R.blocks[R.i];
   $("#hStrum", root)?.addEventListener("click", () => goTo("practicar", { tab: "rasgueo", pattern: b.song.rasgueo }));
   $("#hSeq", root)?.addEventListener("click", () => goTo("practicar", { tab: "secuencia", seq: seqFor(b.song).id }));
-  $("#hTool", root)?.addEventListener("click", () => goTo("practicar", { tab: b.tool, pair: b.pair, mode: b.mode, pattern: b.pattern, tabId: b.tabId, tabSel: b.tabSel, tabMode: b.tabMode }));
+  $("#hTool", root)?.addEventListener("click", () => goTo("practicar", { tab: b.tool, pair: b.pair, mode: b.mode, pattern: b.pattern, tabId: b.tabId, tabPista: b.tabPista, tabSel: b.tabSel, tabMode: b.tabMode }));
   $("#hStart", root)?.addEventListener("click", () => {
     ctx();
     if (R.run) { R.run = false; clearInterval(R.tick); keepAwake(false); }
